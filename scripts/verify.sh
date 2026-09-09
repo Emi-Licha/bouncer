@@ -53,9 +53,12 @@ run() {
 
 # scan <find-expr...>: NUL-separated paths with vendor directories pruned.
 # NUL rather than newline because filenames may contain spaces.
+# examples/broken holds fixtures that are invalid on purpose, so the gate can be
+# demonstrated catching them. They are pruned here and excluded in
+# .pre-commit-config.yaml; `make demo` is what runs the linters against them.
 scan() {
   find . \( -name .git -o -name .terraform -o -name node_modules -o -name .venv \
-            -o -name vendor -o -name "$TMP" \) -prune \
+            -o -name vendor -o -name "$TMP" -o -path './examples/broken' \) -prune \
        -o \( "$@" \) -type f -print0 2>/dev/null
 }
 

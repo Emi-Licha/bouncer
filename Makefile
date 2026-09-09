@@ -5,7 +5,7 @@ SHELL := /bin/bash
 # The logic lives in scripts/verify.sh because macOS ships GNU Make 3.81,
 # which has no .ONESHELL: every recipe line would otherwise be its own shell.
 
-.PHONY: help bootstrap doctor lint verify verify-full clean
+.PHONY: help bootstrap doctor lint verify verify-full demo clean
 
 help:
 	@echo "bootstrap    install the toolchain that verify expects (brew)"
@@ -13,6 +13,7 @@ help:
 	@echo "lint         fast static pass (pre-commit run --all-files)"
 	@echo "verify       canonical gate: lint + semantic validation (<3min, no cloud creds)"
 	@echo "verify-full  verify + e2e against a live cluster (slow, run before pushing)"
+	@echo "demo         show the gate rejecting the fixtures in examples/broken"
 	@echo "clean        remove scratch and cache directories"
 
 bootstrap:
@@ -29,6 +30,9 @@ verify:
 
 verify-full:
 	@bash scripts/verify.sh full
+
+demo:
+	@bash scripts/demo.sh
 
 clean:
 	@rm -rf .verify-tmp .pytest_cache .ruff_cache .mypy_cache
