@@ -23,13 +23,13 @@ file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null
 # outside it, and the linter's output — which quotes the file — reaches the
 # model's context.
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-if command -v realpath >/dev/null 2>&1; then
-  real_file=$(realpath "$file" 2>/dev/null) || exit 0
-  real_root=$(realpath "$root" 2>/dev/null) || exit 0
-else
-  real_file="$file"
-  real_root="$root"
-fi
+# Containment only means anything on canonical paths, so when they cannot be
+# resolved the hook declines to lint at all rather than falling back to the
+# literal test a symlink defeats. Losing lint feedback is acceptable; reading a
+# file outside the project is not.
+command -v realpath >/dev/null 2>&1 || exit 0
+real_file=$(realpath "$file" 2>/dev/null) || exit 0
+real_root=$(realpath "$root" 2>/dev/null) || exit 0
 case "$real_file" in
   "$real_root"/*) ;;
   *) exit 0 ;;
