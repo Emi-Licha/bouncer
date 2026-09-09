@@ -140,6 +140,10 @@ reviewing a diff is a language model: across three runs it produced ten
 findings, of which three were real, and twice its suggested remedy would have
 been worse than the defect. Read its output; do not apply it.
 
+### License
+
+MIT. See [LICENSE](LICENSE).
+
 ## Español
 
 ### El problema
@@ -275,3 +279,7 @@ calientes. Y un subagente revisando un diff es un modelo de lenguaje: en tres
 corridas produjo diez hallazgos, de los cuales tres eran reales, y dos veces el
 remedio que propuso habría sido peor que el defecto. Leé su salida; no la
 apliques.
+
+### Licencia
+
+MIT. Ver [LICENSE](LICENSE).
