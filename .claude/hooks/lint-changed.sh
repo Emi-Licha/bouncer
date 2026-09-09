@@ -18,10 +18,20 @@ file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null
 [ -n "$file" ] || exit 0
 [ -f "$file" ] || exit 0
 
-# Never lint outside the project.
+# Never lint outside the project. Both paths are canonicalised first: a literal
+# prefix test would accept a symlink that lives inside the repo but resolves
+# outside it, and the linter's output — which quotes the file — reaches the
+# model's context.
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-case "$file" in
-  "$root"/*) ;;
+if command -v realpath >/dev/null 2>&1; then
+  real_file=$(realpath "$file" 2>/dev/null) || exit 0
+  real_root=$(realpath "$root" 2>/dev/null) || exit 0
+else
+  real_file="$file"
+  real_root="$root"
+fi
+case "$real_file" in
+  "$real_root"/*) ;;
   *) exit 0 ;;
 esac
 
