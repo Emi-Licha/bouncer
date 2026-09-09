@@ -1,0 +1,73 @@
+# Single source of truth for fast static checks.
+# `make lint` is exactly `pre-commit run --all-files`, and `make verify` runs it
+# as its first step, so there is only one definition of "static check".
+#
+# The linters are `repo: local` on purpose: they call the same binaries that
+# `make bootstrap` installs, so pre-commit and make can never drift to
+# different versions of the same tool.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (secret scan)
+        entry: gitleaks dir . --redact --no-banner
+        language: system
+        pass_filenames: false
+
+      - id: yamllint
+        name: yamllint
+        entry: yamllint -s
+        language: system
+        types: [yaml]
+
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck -x
+        language: system
+        types: [shell]
+
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+        pass_filenames: false
+
+      - id: hadolint
+        name: hadolint
+        entry: hadolint
+        language: system
+        files: (Dockerfile[^/]*|\.dockerfile)$
+
+      - id: markdownlint
+        name: markdownlint
+        entry: markdownlint
+        language: system
+        types: [markdown]
+
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check --force-exclude
+        language: system
+        types: [python]
+
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format --check --force-exclude
+        language: system
+        types: [python]
+
+      - id: terraform-fmt
+        name: terraform fmt
+        entry: terraform fmt -check -diff
+        language: system
+        files: \.(tf|tfvars)$

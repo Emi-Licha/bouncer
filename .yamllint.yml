@@ -1,0 +1,9 @@
+extends: default
+
+rules:
+  line-length:
+    max: 120
+  # Kubernetes and Helm manifests routinely omit the leading `---`.
+  document-start: disable
+  truthy:
+    check-keys: false

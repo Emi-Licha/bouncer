@@ -1,0 +1,8 @@
+default: true
+
+# Line length is a review concern, not a lint error.
+MD013: false
+# Duplicate headings are expected: this repo's docs mirror every section in
+# English and Spanish.
+MD024:
+  siblings_only: true

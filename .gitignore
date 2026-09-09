@@ -1,0 +1,24 @@
+# Claude Code local state
+.claude/settings.local.json
+.claude/.skip-verify
+
+# verify scratch space
+.verify-tmp/
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+crash.log
+
+# python
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+# os
+.DS_Store
