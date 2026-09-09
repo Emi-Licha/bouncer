@@ -76,7 +76,10 @@ stage_lint() {
 }
 
 # pre-commit only sees git-tracked files, so an untracked file bypasses the
-# whole static pass. That is a hole in the gate and has to be visible.
+# whole static pass. This warns instead of failing on purpose: untracked files
+# are normal while work is in progress, and a gate that blocked on them would be
+# switched off within a day. The warning is what keeps the hole visible rather
+# than silent, which is the property that actually matters.
 stage_untracked() {
   git rev-parse --git-dir >/dev/null 2>&1 || return
   local u
@@ -87,22 +90,35 @@ stage_untracked() {
 }
 
 stage_k8s() {
-  : > "$TMP/k8s.txt"
   scan \( -name '*.yaml' -o -name '*.yml' \) > "$TMP/yaml.z"
-  if [ -s "$TMP/yaml.z" ]; then
-    xargs -0 grep -l -E '^apiVersion:' < "$TMP/yaml.z" 2>/dev/null \
-      | tr '\n' '\0' \
-      | xargs -0 grep -l -E '^kind:' 2>/dev/null > "$TMP/k8s.txt"
-  fi
-  if [ ! -s "$TMP/k8s.txt" ]; then
+  : > "$TMP/k8s.z"
+  # One pass, NUL in and NUL out. Chaining two `grep -l` calls would reintroduce
+  # newline separation halfway through and mis-split any filename containing one.
+  # The patterns tolerate indentation and a list dash so that a manifest nested
+  # inside a list is not silently skipped — a file that slips past detection is
+  # never validated and nothing says so.
+  while IFS= read -r -d '' f; do
+    if grep -qE '^[[:space:]]*(-[[:space:]]+)?apiVersion:' "$f" 2>/dev/null &&
+       grep -qE '^[[:space:]]*(-[[:space:]]+)?kind:' "$f" 2>/dev/null; then
+      printf '%s\0' "$f" >> "$TMP/k8s.z"
+    fi
+  done < "$TMP/yaml.z"
+  if [ ! -s "$TMP/k8s.z" ]; then
     skip "kubeconform (no kubernetes manifests)"
     return
   fi
   echo "== kubernetes =="
   need kubeconform "kubernetes manifests" || return
-  tr '\n' '\0' < "$TMP/k8s.txt" > "$TMP/k8s.z"
+  # kubeconform fetches JSON schemas over HTTP. Without a cache that is a
+  # network round trip on every run, which makes the gate slow and flaky; with
+  # one, only the first run needs the network. -ignore-missing-schemas covers
+  # unknown CRDs but not download failures, so a cold cache with no network is
+  # still a hard failure — you genuinely cannot validate in that state.
+  KUBECONFORM_CACHE="${KUBECONFORM_CACHE:-$HOME/.cache/kubeconform}"
+  mkdir -p "$KUBECONFORM_CACHE"
   run "kubeconform" bash -c \
-    "xargs -0 kubeconform -strict -summary -ignore-missing-schemas < '$TMP/k8s.z'"
+    "xargs -0 kubeconform -strict -summary -ignore-missing-schemas \
+       -cache '$KUBECONFORM_CACHE' < '$TMP/k8s.z'"
 }
 
 stage_helm() {
