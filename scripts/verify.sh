@@ -98,7 +98,7 @@ stage_k8s() {
   # One pass, NUL in and NUL out. Chaining two `grep -l` calls would reintroduce
   # newline separation halfway through and mis-split any filename containing one.
   # The patterns tolerate indentation and a list dash so that a manifest nested
-  # inside a list is not silently skipped — a file that slips past detection is
+  # inside a list is not silently skipped. A file that slips past detection is
   # never validated and nothing says so.
   while IFS= read -r -d '' f; do
     if grep -qE '^[[:space:]]*(-[[:space:]]+)?apiVersion:' "$f" 2>/dev/null &&
@@ -116,7 +116,7 @@ stage_k8s() {
   # network round trip on every run, which makes the gate slow and flaky; with
   # one, only the first run needs the network. -ignore-missing-schemas covers
   # unknown CRDs but not download failures, so a cold cache with no network is
-  # still a hard failure — you genuinely cannot validate in that state.
+  # still a hard failure, because you genuinely cannot validate in that state.
   KUBECONFORM_CACHE="${KUBECONFORM_CACHE:-$HOME/.cache/kubeconform}"
   mkdir -p "$KUBECONFORM_CACHE"
   run "kubeconform" bash -c \
@@ -154,7 +154,7 @@ stage_policy() {
   done < "$TMP/kyv.txt"
 }
 
-# Called through run(), which executes it inside $( ) — the cd stays contained.
+# Called through run(), which executes it inside $( ), so the cd stays contained.
 tf_validate() {
   cd "$1" || return 1
   terraform init -backend=false -input=false -no-color >/dev/null || return 1
@@ -274,7 +274,7 @@ if [ -n "$SKIPPED" ]; then
   printf '\nskipped (no such content in this repo):\n%s' "$SKIPPED"
 fi
 if [ -n "$MISSING" ]; then
-  printf '\n%sMISSING TOOLS%s (the repo has content that requires them) — run: make bootstrap\n%s' \
+  printf '\n%sMISSING TOOLS%s (the repo has content that requires them). Run: make bootstrap\n%s' \
     "$R" "$O" "$MISSING"
 fi
 if [ -n "$FAILED" ]; then

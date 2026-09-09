@@ -3,7 +3,7 @@
 # touched. Budget: under 2 seconds.
 #
 # Exit 2 sends stderr back to Claude as feedback. PostToolUse cannot undo the
-# edit — the tool already ran — but the message lands in context and the next
+# edit, since the tool already ran, but the message lands in context and the next
 # step can fix it. Exit 1 is useless here: it is treated as a non-blocking
 # error and only reaches the debug log.
 #
@@ -20,7 +20,7 @@ file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null
 
 # Never lint outside the project. Both paths are canonicalised first: a literal
 # prefix test would accept a symlink that lives inside the repo but resolves
-# outside it, and the linter's output — which quotes the file — reaches the
+# outside it, and the linter's output, which quotes the file, reaches the
 # model's context.
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 # Containment only means anything on canonical paths, so when they cannot be

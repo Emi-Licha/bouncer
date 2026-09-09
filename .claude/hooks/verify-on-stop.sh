@@ -50,7 +50,7 @@ if [ "$n" -ge 3 ]; then
 fi
 
 {
-  printf '=== make verify FAILED (attempt %s/3) — the turn cannot end ===\n' "$n"
+  printf '=== make verify FAILED (attempt %s/3): the turn cannot end ===\n' "$n"
   printf '%s\n' "$out" | tail -60
 } >&2
 exit 2

@@ -2,7 +2,7 @@
 # Installs the toolchain that `make verify` expects, then wires up git hooks.
 #
 # The Homebrew path is the tested one: macOS, and Linuxbrew where it is
-# installed. The apt/dnf path is NOT TESTED — it installs what those
+# installed. The apt/dnf path is NOT TESTED. It installs what those
 # repositories reliably carry and then names what you still have to fetch
 # yourself. Treat it as a starting point, and check the result with
 # `make doctor` rather than trusting that it finished the job.
@@ -111,4 +111,4 @@ if ! report_missing; then
   exit 1
 fi
 
-echo "bootstrap done — run: make doctor"
+echo "bootstrap done. Run: make doctor"

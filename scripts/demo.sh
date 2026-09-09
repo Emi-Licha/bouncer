@@ -23,7 +23,7 @@ expect_reject() {
   shift 2
   printf '\n%s\n' "--- $label"
   if ! command -v "$tool" >/dev/null 2>&1; then
-    printf '  %sskipped%s: %s is not installed — run: make bootstrap\n' "$Y" "$O" "$tool"
+    printf '  %sskipped%s: %s is not installed. Run: make bootstrap\n' "$Y" "$O" "$tool"
     return
   fi
   local out rc
@@ -32,7 +32,7 @@ expect_reject() {
   if [ "$rc" -ne 0 ]; then
     printf '  %sthe gate caught it%s (exit %s)\n' "$G" "$O" "$rc"
   else
-    printf '  %sTHE GATE MISSED IT%s — a non-zero exit was expected\n' "$R" "$O"
+    printf '  %sTHE GATE MISSED IT%s: a non-zero exit was expected\n' "$R" "$O"
     missed=1
   fi
 }
