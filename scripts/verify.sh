@@ -18,6 +18,7 @@ set -uo pipefail
 . "$(dirname "$0")/messages.sh"
 
 STAGE="${1:-core}"
+RUN_OUT=""
 TMP=.verify-tmp
 MISSING=""
 FAILED=""
@@ -43,12 +44,15 @@ need() {
 
 # run <label> <command...>: execute, print a one-line verdict, record failures.
 # The command runs inside $( ), i.e. a subshell, so a callee may cd freely.
+# Sets RUN_OUT to the command's combined output, so a caller that needs to read
+# something out of a successful run does not have to run it twice.
 run() {
   # Trailing space, not part of the padding: a label longer than the field runs
   # straight into the verdict otherwise.
   printf '  %-28s ' "$1"
   local out rc
   out=$("${@:2}" 2>&1); rc=$?
+  RUN_OUT="$out"
   if [ "$rc" -eq 0 ]; then
     printf '%sok%s\n' "$G" "$O"
   else
@@ -173,6 +177,15 @@ stage_k8s() {
   run "kubeconform" bash -c \
     "xargs -0 kubeconform -strict -summary -ignore-missing-schemas \
        -cache '$KUBECONFORM_CACHE' < '$TMP/k8s.z'"
+  # -ignore-missing-schemas is what lets CRDs through, and it is also how a run
+  # reports ok while validating a fraction of what it read: a Kustomization and
+  # two kyverno CRDs are skipped in silence. The count is surfaced so nobody
+  # mistakes "kubeconform ok" for "every manifest was checked".
+  local skipped
+  skipped=$(printf '%s' "$RUN_OUT" | sed -n 's/.*Skipped: \([0-9][0-9]*\).*/\1/p' | tail -1)
+  if [ -n "$skipped" ] && [ "$skipped" -gt 0 ]; then
+    printf '  %swarn%s  %s\n' "$Y" "$O" "$(msg kubeconform_skipped "$skipped")"
+  fi
 }
 
 stage_helm() {

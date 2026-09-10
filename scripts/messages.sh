@@ -39,6 +39,7 @@ msg_en() {
     required_by)        printf '(required by: %%s)' ;;
     untracked_warn)     printf 'untracked files are invisible to pre-commit:' ;;
     no_cluster)         printf 'skipped: no reachable cluster' ;;
+    kubeconform_skipped) printf '%%s resource(s) had no schema and were not validated' ;;
     unknown_stage)      printf 'unknown stage: %%s (expected: lint, core, full, doctor)' ;;
     doctor_tool)        printf 'TOOL' ;;
     doctor_status)      printf 'STATUS' ;;
@@ -102,6 +103,7 @@ msg_es() {
     required_by)        printf '(lo pide: %%s)' ;;
     untracked_warn)     printf 'los archivos sin trackear son invisibles para pre-commit:' ;;
     no_cluster)         printf 'salteado: no hay cluster accesible' ;;
+    kubeconform_skipped) printf '%%s recurso(s) sin schema, no se validaron' ;;
     unknown_stage)      printf 'etapa desconocida: %%s (se esperaba: lint, core, full, doctor)' ;;
     doctor_tool)        printf 'HERRAMIENTA' ;;
     doctor_status)      printf 'ESTADO' ;;

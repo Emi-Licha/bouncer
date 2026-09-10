@@ -143,6 +143,12 @@ Terraform checks are skipped, and that is honest. But `.tf` files with no
 `tflint` installed is a hard failure, because otherwise the gate goes green for
 the worst possible reason: nothing is installed to catch anything.
 
+**`kubeconform ok` does not mean every manifest was checked.**
+`-ignore-missing-schemas` is what lets a CRD through, and it is also how a run
+reports success having validated a fraction of what it read: a Kustomization and
+two kyverno resources are skipped in silence. The stage prints the skipped count
+for that reason, so nobody reads a green line as more coverage than it is.
+
 **The coverage floor is 85%, and only for `src/` layouts.** Coverage is measured
 against `src/` rather than everything, because a bare `--cov` counts the test
 files, which are close to fully covered by definition and lift the total over the
@@ -214,18 +220,23 @@ is the exception, because the python stage looks for `src/`, `tests/` and
 `pyproject.toml` at the repository root and cannot see a fixture in a
 subdirectory.
 
+- The reviewer following the configured language in both directions: asked in
+  Spanish with the default in place it answered in English, and with
+  `.harness.conf` set to Spanish it announced `Language is es` and answered in
+  Spanish.
+- `make verify-full` against a real cluster, on kind under colima. A ConfigMap
+  named `Nombre_Invalido` is `Valid: 1` to kubeconform, whose schema does not
+  constrain the format of a name, and is rejected by the API server for not
+  being an RFC 1123 subdomain. That gap is the whole reason the e2e stage exists
+  separately.
+
 Not verified:
 
-- **`make verify-full` against a live cluster.** Only the path where nothing
-  answers has been seen.
 - **The apt/dnf path in `bootstrap.sh`.** Written, never run. Homebrew is the
   tested route, on macOS and Linuxbrew alike.
-- **The reviewer reporting in Spanish on request.** The English default has been
-  confirmed the interesting way round, by asking in Spanish and getting the
-  report in English, so it follows the configuration and not the conversation.
-  Pointing `.harness.conf` at Spanish and watching it switch has not been done.
 - **The three minute budget** against a repository with real content. On this
-  one, which is nearly empty, `verify` takes about two seconds.
+  one `verify` takes about two seconds and `selftest`, which does have content,
+  about six.
 
 ### Limits
 
@@ -392,6 +403,13 @@ que haya archivos `.tf` sin `tflint` instalado es un fallo duro, porque si no el
 gate se pone verde por el peor motivo posible: no hay nada instalado que pueda
 atrapar nada.
 
+**Que diga `kubeconform ok` no significa que se hayan chequeado todos los
+manifiestos.** `-ignore-missing-schemas` es lo que deja pasar un CRD, y también
+es la forma en que una corrida reporta éxito habiendo validado una fracción de lo
+que leyó: una Kustomization y dos recursos de kyverno se saltean en silencio. Por
+eso la etapa imprime cuántos salteó, para que nadie lea una línea verde como más
+cobertura de la que es.
+
 **El piso de cobertura es 85%, y solo para layouts con `src/`.** La cobertura se
 mide contra `src/` y no contra todo, porque un `--cov` pelado cuenta también los
 archivos de test, que están casi completamente cubiertos por definición y
@@ -466,18 +484,22 @@ commit. El piso de cobertura es la excepción, porque la etapa de python busca
 `src/`, `tests/` y `pyproject.toml` en la raíz del repo y no puede ver un fixture
 en un subdirectorio.
 
+- El reviewer siguiendo el idioma configurado en los dos sentidos: preguntado en
+  castellano y con el default puesto contestó en inglés, y con `.harness.conf` en
+  castellano anunció `Language is es` y contestó en castellano.
+- `make verify-full` contra un cluster de verdad, kind sobre colima. Un ConfigMap
+  llamado `Nombre_Invalido` es `Valid: 1` para kubeconform, cuyo schema no
+  restringe el formato del nombre, y el API server lo rechaza por no ser un
+  subdominio RFC 1123. Esa brecha es exactamente por lo que la etapa e2e existe
+  aparte.
+
 Sin verificar:
 
-- **`make verify-full` contra un cluster de verdad.** Solo se vio el camino en
-  el que no responde ninguno.
 - **El camino apt/dnf de `bootstrap.sh`.** Escrito, nunca ejecutado. Homebrew es
   la ruta probada, tanto en macOS como en Linuxbrew.
-- **El reviewer reportando en castellano cuando se lo pide.** El default en
-  inglés sí quedó confirmado por el lado interesante: se le preguntó en
-  castellano y contestó en inglés, o sea que sigue la configuración y no la
-  conversación. Falta apuntar `.harness.conf` al castellano y verlo cambiar.
-- **El presupuesto de tres minutos** contra un repo con contenido real. En este,
-  que está casi vacío, `verify` tarda unos dos segundos.
+- **El presupuesto de tres minutos** contra un repo con contenido real. En este
+  `verify` tarda unos dos segundos y `selftest`, que sí tiene contenido, unos
+  seis.
 
 ### Límites
 
