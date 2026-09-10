@@ -176,12 +176,13 @@ end to end, against the real runtime:
   and the unknown-stage error path in both languages.
 - `.harness.conf` reaching the hooks and not only `make`, and both hooks falling
   back to English when the catalogue is missing rather than failing.
+- `kyverno test` passing on a policy whose test matches and failing when it does
+  not, `terraform-docs` on a module whose README is current and on one that is
+  stale, and the coverage floor rejecting 75% source coverage while accepting
+  full coverage.
 
 Not verified:
 
-- **`kyverno test` and `terraform-docs`.** Neither stage has ever run, because
-  nothing here has a policy test or a `.terraform-docs.yml`.
-- **`pytest` and the 85% coverage floor.** Never exercised.
 - **`make verify-full` against a live cluster.** Only the path where nothing
   answers has been seen.
 - **The apt/dnf path in `bootstrap.sh`.** Written, never run. Homebrew is the
@@ -386,12 +387,13 @@ macOS, punta a punta, contra el runtime real:
   `help`, `clean`, y el camino de error de etapa desconocida en los dos idiomas.
 - `.harness.conf` llegando a los hooks y no solo a `make`, y los dos hooks
   cayendo a inglés cuando falta el catálogo en vez de romperse.
+- `kyverno test` pasando con una policy cuyo test coincide y fallando cuando no,
+  `terraform-docs` sobre un módulo con el README al día y sobre uno
+  desactualizado, y el piso de cobertura rechazando un 75% de cobertura del
+  fuente y aceptando la cobertura completa.
 
 Sin verificar:
 
-- **`kyverno test` y `terraform-docs`.** Ninguna de las dos etapas corrió nunca,
-  porque acá no hay ningún test de policy ni un `.terraform-docs.yml`.
-- **`pytest` y el piso de 85% de cobertura.** Nunca se ejercitó.
 - **`make verify-full` contra un cluster de verdad.** Solo se vio el camino en
   el que no responde ninguno.
 - **El camino apt/dnf de `bootstrap.sh`.** Escrito, nunca ejecutado. Homebrew es
