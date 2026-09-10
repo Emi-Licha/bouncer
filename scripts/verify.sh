@@ -12,7 +12,7 @@
 # Written for bash 3.2 (macOS): no associative arrays, no mapfile, no ${var,,}.
 set -uo pipefail
 
-# Everything printed here goes through msg(), so the harness can speak
+# Everything printed here goes through msg(), so Bouncer can speak
 # English or Spanish. scripts/messages.sh explains how it picks.
 # shellcheck source=scripts/messages.sh
 . "$(dirname "$0")/messages.sh"
@@ -67,7 +67,7 @@ run() {
 # everything, which is the only way the stage wiring itself gets exercised.
 # Ordinary runs prune it, so the repository's own gate stays fast and a fork does
 # not inherit fixtures it never asked for.
-if [ -n "${HARNESS_SELFTEST:-}" ]; then
+if [ -n "${BOUNCER_SELFTEST:-}" ]; then
   VALID_PRUNE='./examples/__not_a_path__'
 else
   VALID_PRUNE='./examples/valid'
@@ -324,7 +324,7 @@ stage_e2e() {
 }
 
 stage_doctor() {
-  printf '%s: %s\n\n' "$(msg lang_active)" "$HARNESS_LANG_ACTIVE"
+  printf '%s: %s\n\n' "$(msg lang_active)" "$BOUNCER_LANG_ACTIVE"
   printf '%-16s %s\n' "$(msg doctor_tool)" "$(msg doctor_status)"
   for t in pre-commit gitleaks yamllint kubeconform helm kyverno terraform \
            tflint terraform-docs trivy actionlint shellcheck hadolint \

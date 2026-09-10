@@ -10,7 +10,7 @@ SHELL := /bin/bash
 help:
 	@echo "bootstrap    install the toolchain that verify expects (brew)"
 	@echo "doctor       report which tools are installed and which are missing"
-	@echo "lang         print the language the harness is currently speaking"
+	@echo "lang         print the language Bouncer is currently speaking"
 	@echo "lint         fast static pass (pre-commit run --all-files)"
 	@echo "verify       canonical gate: lint + semantic validation (<3min, no cloud creds)"
 	@echo "verify-full  verify + e2e against a live cluster (slow, run before pushing)"
@@ -26,7 +26,7 @@ doctor:
 	@bash scripts/verify.sh doctor
 
 lang:
-	@bash -c '. scripts/messages.sh; printf "%s\n" "$$HARNESS_LANG_ACTIVE"'
+	@bash -c '. scripts/messages.sh; printf "%s\n" "$$BOUNCER_LANG_ACTIVE"'
 
 lint:
 	@bash scripts/verify.sh lint
@@ -43,7 +43,7 @@ demo:
 # `full` rather than `core`: with no cluster the e2e stage skips itself with a
 # warning, and with one it actually runs, so this covers more for no extra cost.
 selftest:
-	@HARNESS_SELFTEST=1 bash scripts/verify.sh full
+	@BOUNCER_SELFTEST=1 bash scripts/verify.sh full
 
 clean:
 	@rm -rf .verify-tmp .pytest_cache .ruff_cache .mypy_cache

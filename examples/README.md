@@ -11,7 +11,7 @@ the gate itself over them and fails if it does not pass.
 One shows the gate catches things. The other shows it does not cry wolf, and,
 more usefully, exercises the wiring: detection, the exclusion of chart sources
 from `kubeconform`, the per-module scoping of `trivy` and `terraform-docs`. Every
-bug found in this harness so far lived in that wiring, not in the tools.
+bug found in Bouncer so far lived in that wiring, not in the tools.
 
 ## English
 
@@ -22,7 +22,7 @@ make selftest  # everything in valid/ must pass
 
 `valid/` is pruned from an ordinary `make verify`, so the repository's own gate
 stays fast and a fork does not inherit fixtures it never asked for.
-`make selftest` sets `HARNESS_SELFTEST=1`, which unprunes it.
+`make selftest` sets `BOUNCER_SELFTEST=1`, which unprunes it.
 
 | File | What it is for |
 | --- | --- |
@@ -52,7 +52,7 @@ make selftest  # todo lo de valid/ tiene que pasar
 
 `valid/` queda excluido de un `make verify` normal, así el gate del propio repo
 sigue siendo rápido y quien forkee no arrastra fixtures que nunca pidió.
-`make selftest` setea `HARNESS_SELFTEST=1`, que lo vuelve a incluir.
+`make selftest` setea `BOUNCER_SELFTEST=1`, que lo vuelve a incluir.
 
 | Archivo | Para qué está |
 | --- | --- |

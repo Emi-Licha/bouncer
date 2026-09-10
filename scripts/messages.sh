@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Message catalogue for everything the harness prints.
+# Message catalogue for everything Bouncer prints.
 #
 # Language resolution, highest priority first:
-#   1. HARNESS_LANG in the environment
-#   2. lang= in .harness.conf at the repository root
+#   1. BOUNCER_LANG in the environment
+#   2. lang= in .bouncer.conf at the repository root
 #   3. English
 #
 # Any value other than "es" resolves to English, so a typo degrades to the
@@ -13,11 +13,11 @@
 # statements. A key absent from the Spanish one falls through to English,
 # which keeps a half-translated catalogue readable instead of broken.
 
-harness_resolve_lang() {
-  local want="${HARNESS_LANG:-}"
-  if [ -z "$want" ] && [ -r .harness.conf ]; then
+bouncer_resolve_lang() {
+  local want="${BOUNCER_LANG:-}"
+  if [ -z "$want" ] && [ -r .bouncer.conf ]; then
     want=$(sed -n 's/^[[:space:]]*lang[[:space:]]*=[[:space:]]*\([A-Za-z_-]*\).*/\1/p' \
-             .harness.conf 2>/dev/null | head -1)
+             .bouncer.conf 2>/dev/null | head -1)
   fi
   case "$want" in
     es | es[-_]*) printf 'es' ;;
@@ -25,7 +25,7 @@ harness_resolve_lang() {
   esac
 }
 
-HARNESS_LANG_ACTIVE=$(harness_resolve_lang)
+BOUNCER_LANG_ACTIVE=$(bouncer_resolve_lang)
 
 msg_en() {
   case "$1" in
@@ -160,7 +160,7 @@ msg() {
   local key="$1"
   shift
   local fmt=""
-  if [ "$HARNESS_LANG_ACTIVE" = "es" ]; then
+  if [ "$BOUNCER_LANG_ACTIVE" = "es" ]; then
     fmt=$(msg_es "$key")
   fi
   if [ -z "$fmt" ]; then
