@@ -207,9 +207,15 @@ stage_terraform() {
       run "trivy config $d" trivy config --exit-code 1 --quiet "$d"
     done < "$TMP/tfdirs.txt"
   fi
+  # Like trivy, this is scoped per module. Pointed at the repository root it
+  # checks a directory that holds no .tf at all, decides the project's own
+  # README is missing terraform documentation, and fails.
   if [ -f .terraform-docs.yml ]; then
-    need terraform-docs ".terraform-docs.yml" \
-      && run "terraform-docs" terraform-docs markdown table --output-check .
+    if need terraform-docs ".terraform-docs.yml"; then
+      while IFS= read -r d; do
+        run "terraform-docs $d" terraform-docs markdown table --output-check "$d"
+      done < "$TMP/tfdirs.txt"
+    fi
   else
     skip "$(msg skip_tfdocs)"
   fi
@@ -235,11 +241,21 @@ stage_python() {
   else
     skip "$(msg skip_mypy)"
   fi
-  if [ -d tests ] && [ -f pyproject.toml ]; then
-    need uv "python tests" && run "pytest" \
-      uv run --with pytest --with pytest-cov pytest -q --cov --cov-fail-under=85
-  else
+  # A bare --cov measures the test files too. Tests are close to fully covered
+  # by definition, so they lift the total and the floor can be cleared while the
+  # code under test sits far below it: 75% source plus 100% tests reported 89%
+  # and passed an 85% floor. Coverage is therefore scoped to src/, and where
+  # there is no src/ the floor is dropped rather than left unscoped, because a
+  # threshold that reports green for the wrong reason is worse than none.
+  if [ ! -d tests ] || [ ! -f pyproject.toml ]; then
     skip "$(msg skip_pytest)"
+  elif [ ! -d src ]; then
+    skip "$(msg skip_cov)"
+    need uv "python tests" && run "pytest" uv run --with pytest pytest -q
+  else
+    need uv "python tests" && run "pytest" \
+      uv run --with pytest --with pytest-cov pytest -q \
+        --cov=src --cov-fail-under=85
   fi
 }
 

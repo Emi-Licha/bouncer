@@ -54,6 +54,7 @@ msg_en() {
     skip_python)        printf 'python (no .py files)' ;;
     skip_mypy)          printf 'mypy (no src/)' ;;
     skip_pytest)        printf 'pytest (needs tests/ and pyproject.toml)' ;;
+    skip_cov)           printf 'coverage floor (needs a src/ layout to scope it to)' ;;
     skip_e2e)           printf 'e2e (no kustomizations)' ;;
 
     demo_intro)         printf 'Each fixture below is broken on purpose. Every check is expected to fail.' ;;
@@ -115,6 +116,7 @@ msg_es() {
     skip_python)        printf 'python (no hay archivos .py)' ;;
     skip_mypy)          printf 'mypy (no hay src/)' ;;
     skip_pytest)        printf 'pytest (necesita tests/ y pyproject.toml)' ;;
+    skip_cov)           printf 'piso de cobertura (necesita un layout src/ al que acotarlo)' ;;
     skip_e2e)           printf 'e2e (no hay kustomizations)' ;;
 
     demo_intro)         printf 'Cada fixture de abajo está roto a propósito. Se espera que todos los checks fallen.' ;;
