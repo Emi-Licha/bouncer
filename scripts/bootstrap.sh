@@ -70,15 +70,24 @@ report_missing() {
   msg boot_still_missing; echo
   for t in $missing; do
     case "$t" in
+      pre-commit)     printf '  %-16s github: pre-commit/pre-commit\n' "$t" ;;
       gitleaks)       printf '  %-16s github: gitleaks/gitleaks\n' "$t" ;;
+      yamllint)       printf '  %-16s github: adrienverge/yamllint\n' "$t" ;;
       kubeconform)    printf '  %-16s github: yannh/kubeconform\n' "$t" ;;
+      helm)           printf '  %-16s github: helm/helm\n' "$t" ;;
       kyverno)        printf '  %-16s github: kyverno/kyverno\n' "$t" ;;
+      terraform)      printf '  %-16s github: hashicorp/terraform\n' "$t" ;;
       tflint)         printf '  %-16s github: terraform-linters/tflint\n' "$t" ;;
       terraform-docs) printf '  %-16s github: terraform-docs/terraform-docs\n' "$t" ;;
+      trivy)          printf '  %-16s github: aquasecurity/trivy\n' "$t" ;;
       actionlint)     printf '  %-16s github: rhysd/actionlint\n' "$t" ;;
+      shellcheck)     printf '  %-16s github: koalaman/shellcheck\n' "$t" ;;
       hadolint)       printf '  %-16s github: hadolint/hadolint\n' "$t" ;;
       markdownlint)   printf '  %-16s npm: markdownlint-cli\n' "$t" ;;
+      ruff)           printf '  %-16s github: astral-sh/ruff\n' "$t" ;;
+      mypy)           printf '  %-16s github: python/mypy\n' "$t" ;;
       uv)             printf '  %-16s github: astral-sh/uv\n' "$t" ;;
+      kubectl)        printf '  %-16s github: kubernetes/kubernetes\n' "$t" ;;
       *)              printf '  %-16s %s\n' "$t" "$(msg boot_from_project)" ;;
     esac
   done

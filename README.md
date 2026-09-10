@@ -168,22 +168,28 @@ end to end, against the real runtime:
   an invalid one under `-strict`, its schema cache filling up, `helm template`
   on a stock chart, `terraform init -backend=false` and `validate`, `tflint`,
   `trivy config`, and `mypy --strict`.
+- Pathological filenames: a name holding a space, a quote or a newline is
+  detected, validated and reported without ever being split.
+- `bootstrap` on all three of its branches, and the exit code each returns: a
+  complete toolchain, an incomplete one, and no package manager at all.
+- `make verify-full` skipping e2e when no cluster answers, plus `help`, `clean`,
+  and the unknown-stage error path in both languages.
+- `.harness.conf` reaching the hooks and not only `make`, and both hooks falling
+  back to English when the catalogue is missing rather than failing.
 
 Not verified:
 
 - **`kyverno test` and `terraform-docs`.** Neither stage has ever run, because
   nothing here has a policy test or a `.terraform-docs.yml`.
 - **`pytest` and the 85% coverage floor.** Never exercised.
-- **`make verify-full`.** No cluster was available. It reports that and skips.
+- **`make verify-full` against a live cluster.** Only the path where nothing
+  answers has been seen.
 - **The apt/dnf path in `bootstrap.sh`.** Written, never run. Homebrew is the
   tested route, on macOS and Linuxbrew alike.
-- **`bootstrap` actually installing something.** It has only ever run on a
-  machine where every tool was already present, so the branch that installs and
-  the one that lists what is still missing are both untried.
-- **The reviewer writing in Spanish**, and the claim that its allowlist stops it
-  from writing files. Neither has been put to the test.
-- **Filenames containing spaces or newlines**, which is what the NUL handling
-  throughout `verify.sh` exists for.
+- **The reviewer obeying `make lang`**, and the claim that its allowlist stops
+  it from writing files. Neither has been put to the test. It has reported in
+  Spanish, but only before the setting existed, when it was simply following the
+  conversation.
 - **The three minute budget** against a repository with real content. On this
   one, which is nearly empty, `verify` takes about two seconds.
 
@@ -372,22 +378,28 @@ macOS, punta a punta, contra el runtime real:
   rechazando uno inválido con `-strict`, su cache de schemas poblándose,
   `helm template` sobre un chart recién creado, `terraform init -backend=false`
   y `validate`, `tflint`, `trivy config`, y `mypy --strict`.
+- Nombres de archivo patológicos: uno con espacio, con comilla o con salto de
+  línea se detecta, se valida y se reporta sin partirse nunca.
+- `bootstrap` en sus tres ramas, con el código de salida de cada una: toolchain
+  completo, incompleto, y sin ningún gestor de paquetes.
+- `make verify-full` salteando e2e cuando no responde ningún cluster, más
+  `help`, `clean`, y el camino de error de etapa desconocida en los dos idiomas.
+- `.harness.conf` llegando a los hooks y no solo a `make`, y los dos hooks
+  cayendo a inglés cuando falta el catálogo en vez de romperse.
 
 Sin verificar:
 
 - **`kyverno test` y `terraform-docs`.** Ninguna de las dos etapas corrió nunca,
   porque acá no hay ningún test de policy ni un `.terraform-docs.yml`.
 - **`pytest` y el piso de 85% de cobertura.** Nunca se ejercitó.
-- **`make verify-full`.** No había cluster disponible. Lo reporta y lo saltea.
+- **`make verify-full` contra un cluster de verdad.** Solo se vio el camino en
+  el que no responde ninguno.
 - **El camino apt/dnf de `bootstrap.sh`.** Escrito, nunca ejecutado. Homebrew es
   la ruta probada, tanto en macOS como en Linuxbrew.
-- **`bootstrap` instalando algo de verdad.** Solo corrió en una máquina donde ya
-  estaban todas las herramientas, así que la rama que instala y la que lista lo
-  que falta están las dos sin probar.
-- **El reviewer escribiendo en castellano**, y la afirmación de que su allowlist
-  le impide escribir archivos. Ninguna de las dos se puso a prueba.
-- **Nombres de archivo con espacios o saltos de línea**, que es justamente para
-  lo que existe todo el manejo de NUL en `verify.sh`.
+- **El reviewer obedeciendo a `make lang`**, y la afirmación de que su allowlist
+  le impide escribir archivos. Ninguna de las dos se puso a prueba. Reportó en
+  castellano, pero solo antes de que la opción existiera, cuando simplemente
+  seguía el idioma de la conversación.
 - **El presupuesto de tres minutos** contra un repo con contenido real. En este,
   que está casi vacío, `verify` tarda unos dos segundos.
 
