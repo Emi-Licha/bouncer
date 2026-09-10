@@ -9,7 +9,7 @@
 # Fixtures that are invalid on purpose, so `make demo` can show the gate
 # rejecting them. Excluding them here is what keeps the repository's own
 # `make verify` green.
-exclude: ^examples/broken/
+exclude: ^examples/broken/|^examples/valid/chart/templates/
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

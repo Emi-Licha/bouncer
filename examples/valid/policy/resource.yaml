@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: labelled
+  labels:
+    team: platform
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27

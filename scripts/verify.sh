@@ -58,14 +58,26 @@ run() {
   fi
 }
 
+# examples/valid holds real content: a module, a chart, a policy, a manifest.
+# `make selftest` unprunes it so the gate runs over content instead of skipping
+# everything, which is the only way the stage wiring itself gets exercised.
+# Ordinary runs prune it, so the repository's own gate stays fast and a fork does
+# not inherit fixtures it never asked for.
+if [ -n "${HARNESS_SELFTEST:-}" ]; then
+  VALID_PRUNE='./examples/__not_a_path__'
+else
+  VALID_PRUNE='./examples/valid'
+fi
+
 # scan <find-expr...>: NUL-separated paths with vendor directories pruned.
 # NUL rather than newline because filenames may contain spaces.
 # examples/broken holds fixtures that are invalid on purpose, so the gate can be
-# demonstrated catching them. They are pruned here and excluded in
+# demonstrated catching them. They are always pruned here and excluded in
 # .pre-commit-config.yaml; `make demo` is what runs the linters against them.
 scan() {
   find . \( -name .git -o -name .terraform -o -name node_modules -o -name .venv \
-            -o -name vendor -o -name "$TMP" -o -path './examples/broken' \) -prune \
+            -o -name vendor -o -name "$TMP" -o -path './examples/broken' \
+            -o -path "$VALID_PRUNE" \) -prune \
        -o \( "$@" \) -type f -print0 2>/dev/null
 }
 

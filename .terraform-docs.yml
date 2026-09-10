@@ -1,0 +1,11 @@
+# anchor: false because terraform-docs otherwise emits <a name="..."> tags and
+# markdownlint rejects inline HTML (MD033). Configuring the generator is the fix;
+# switching off the lint rule would be relaxing a check to make output pass.
+formatter: markdown table
+
+output:
+  file: README.md
+  mode: inject
+
+settings:
+  anchor: false

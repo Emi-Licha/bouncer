@@ -1,0 +1,6 @@
+apiVersion: v2
+name: harness-example
+description: Minimal chart, so helm template has something to render
+type: application
+version: 0.1.0
+appVersion: "1.0"

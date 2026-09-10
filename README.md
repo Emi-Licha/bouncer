@@ -61,8 +61,17 @@ make demo
 ```
 
 `make demo` runs the linters against files in `examples/broken/` that are
-invalid on purpose. It fails if any of them is *not* rejected, so it tells you
-the gate is awake rather than asking you to assume it.
+invalid on purpose. It fails if any of them is *not* rejected. Then the other
+half:
+
+```bash
+make selftest
+```
+
+`make selftest` runs the gate itself over `examples/valid/`, which holds a real
+module, chart, policy and manifest, and it has to pass. Between the two you have
+watched the gate reject what it should and accept what it should, on your own
+machine, without taking either on faith.
 
 ### Language
 
@@ -94,7 +103,8 @@ translation is usable from the first string.
 
 | Path | What it does |
 | --- | --- |
-| `Makefile` | `verify` is the canonical gate. Also `lint`, `verify-full`, `demo`, `doctor`, `lang`, `bootstrap`. |
+| `Makefile` | `verify` is the canonical gate. Also `lint`, `verify-full`, `demo`, `selftest`, `doctor`, `lang`, `bootstrap`. |
+| `examples/` | `broken/` must be rejected by `make demo`; `valid/` must be accepted by `make selftest`. |
 | `scripts/verify.sh` | The engine. The logic lives here because macOS ships GNU Make 3.81, which has no `.ONESHELL`. |
 | `scripts/messages.sh` | Every string the harness prints, in English and Spanish. |
 | `.claude/hooks/lint-changed.sh` | `PostToolUse` on `Edit\|Write`. Lints only the file just written, in under two seconds. |
@@ -197,6 +207,13 @@ end to end, against the real runtime:
 - The coverage floor rejecting 75% source coverage, accepting full coverage, and
   standing aside for a project that has no `src/` to scope it to.
 
+Everything above except the coverage floor is reproducible: `make selftest` runs
+the gate over `examples/valid/` and `make demo` runs it over `examples/broken/`,
+so none of it has to be taken on the word of a commit message. The coverage floor
+is the exception, because the python stage looks for `src/`, `tests/` and
+`pyproject.toml` at the repository root and cannot see a fixture in a
+subdirectory.
+
 Not verified:
 
 - **`make verify-full` against a live cluster.** Only the path where nothing
@@ -292,8 +309,16 @@ make demo
 ```
 
 `make demo` corre los linters contra archivos de `examples/broken/` que son
-inválidos a propósito. Falla si alguno *no* es rechazado, así que te avisa que
-el gate está despierto en vez de pedirte que lo supongas.
+inválidos a propósito. Falla si alguno *no* es rechazado. Después, la otra mitad:
+
+```bash
+make selftest
+```
+
+`make selftest` corre el gate mismo sobre `examples/valid/`, que tiene un módulo,
+un chart, una policy y un manifiesto de verdad, y tiene que pasar. Entre los dos
+ya viste al gate rechazar lo que debe y aceptar lo que debe, en tu propia
+máquina, sin creerle nada a nadie.
 
 ### Idioma
 
@@ -325,7 +350,8 @@ parcial ya sirve desde la primera cadena.
 
 | Ruta | Qué hace |
 | --- | --- |
-| `Makefile` | `verify` es el gate canónico. También están `lint`, `verify-full`, `demo`, `doctor`, `lang` y `bootstrap`. |
+| `Makefile` | `verify` es el gate canónico. También están `lint`, `verify-full`, `demo`, `selftest`, `doctor`, `lang` y `bootstrap`. |
+| `examples/` | `broken/` tiene que ser rechazado por `make demo`; `valid/` tiene que ser aceptado por `make selftest`. |
 | `scripts/verify.sh` | El motor. La lógica vive acá porque macOS trae GNU Make 3.81, que no tiene `.ONESHELL`. |
 | `scripts/messages.sh` | Todas las cadenas que imprime el arnés, en inglés y castellano. |
 | `.claude/hooks/lint-changed.sh` | `PostToolUse` con matcher `Edit\|Write`. Lintea solo el archivo recién escrito, en menos de dos segundos. |
@@ -432,6 +458,13 @@ macOS, punta a punta, contra el runtime real:
 - El piso de cobertura rechazando un 75% de cobertura del fuente, aceptando la
   cobertura completa, y haciéndose a un lado en un proyecto sin `src/` al que
   acotarlo.
+
+Todo lo anterior salvo el piso de cobertura es reproducible: `make selftest`
+corre el gate sobre `examples/valid/` y `make demo` lo corre sobre
+`examples/broken/`, así que nada de esto hay que creérselo por el mensaje de un
+commit. El piso de cobertura es la excepción, porque la etapa de python busca
+`src/`, `tests/` y `pyproject.toml` en la raíz del repo y no puede ver un fixture
+en un subdirectorio.
 
 Sin verificar:
 

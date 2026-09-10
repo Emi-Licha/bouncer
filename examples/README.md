@@ -1,56 +1,74 @@
 # Examples
 
+Two directories, for the two halves of the same question.
+
+`broken/` holds files that are invalid on purpose. `make demo` runs the gate's
+linters over them and fails if any is *not* rejected.
+
+`valid/` holds a real module, chart, policy and manifest. `make selftest` runs
+the gate itself over them and fails if it does not pass.
+
+One shows the gate catches things. The other shows it does not cry wolf, and,
+more usefully, exercises the wiring: detection, the exclusion of chart sources
+from `kubeconform`, the per-module scoping of `trivy` and `terraform-docs`. Every
+bug found in this harness so far lived in that wiring, not in the tools.
+
 ## English
 
-Every file in `broken/` is invalid deliberately. They exist so the gate can
-be watched rejecting something instead of only being described.
-
-Run them with:
-
 ```bash
-make demo
+make demo      # every fixture in broken/ must be rejected
+make selftest  # everything in valid/ must pass
 ```
 
-The demo passes when **every** fixture is rejected. A fixture that passes means
-the gate stopped catching something it used to catch, which is the failure
-these fixtures exist to detect.
+`valid/` is pruned from an ordinary `make verify`, so the repository's own gate
+stays fast and a fork does not inherit fixtures it never asked for.
+`make selftest` sets `HARNESS_SELFTEST=1`, which unprunes it.
 
-| File | What it breaks |
+| File | What it is for |
 | --- | --- |
-| `unquoted-var.sh` | An unquoted variable that is never assigned: shellcheck SC2154 and SC2086. |
-| `bad-indent.yaml` | A mapping value indented under a scalar: a YAML syntax error. |
-| `Dockerfile` | An untagged base image and an `apt-get install` that never cleans up. |
+| `broken/unquoted-var.sh` | An unquoted variable that is never assigned: shellcheck SC2154 and SC2086. |
+| `broken/bad-indent.yaml` | A mapping value indented under a scalar: a YAML syntax error. |
+| `broken/Dockerfile` | An untagged base image and an `apt-get install` that never cleans up. |
+| `valid/k8s/` | A plain manifest, so `kubeconform` has something to validate. |
+| `valid/chart/` | A minimal chart. Its templates are Go template text, so they are excluded from `kubeconform` and linted only through `helm template`. |
+| `valid/policy/` | A kyverno policy with a test that passes. |
+| `valid/terraform/` | A module with a generated README, which is what opts it into the `terraform-docs` check. |
 
-These files are excluded from the repository's own checks, in
-`.pre-commit-config.yaml` and in the `scan()` prune list in `scripts/verify.sh`.
-That exclusion is what lets them stay broken while `make verify` stays green. If
-you add a fixture here, it needs a matching assertion in `scripts/demo.sh`.
-Otherwise it is just an invalid file nobody looks at.
+Adding a fixture to `broken/` means adding a matching assertion in
+`scripts/demo.sh`; without one it is just an invalid file nobody looks at.
+Adding one to `valid/` needs nothing: `make selftest` runs the whole gate, so it
+is picked up by whichever stage claims it.
+
+Python is not covered by `selftest`. The python stage looks for `src/`, `tests/`
+and `pyproject.toml` at the repository root, so a fixture in a subdirectory is
+invisible to it.
 
 ## Español
 
-Todos los archivos de `broken/` son inválidos a propósito. Existen para
-poder **ver** al gate rechazando algo, en vez de solo leer que lo hace.
-
-Se corren con:
-
 ```bash
-make demo
+make demo      # todos los fixtures de broken/ tienen que ser rechazados
+make selftest  # todo lo de valid/ tiene que pasar
 ```
 
-El demo pasa cuando **todos** los fixtures son rechazados. Si alguno pasa,
-significa que el gate dejó de atrapar algo que antes atrapaba, que es
-precisamente la falla que estos fixtures sirven para detectar.
+`valid/` queda excluido de un `make verify` normal, así el gate del propio repo
+sigue siendo rápido y quien forkee no arrastra fixtures que nunca pidió.
+`make selftest` setea `HARNESS_SELFTEST=1`, que lo vuelve a incluir.
 
-| Archivo | Qué rompe |
+| Archivo | Para qué está |
 | --- | --- |
-| `unquoted-var.sh` | Una variable sin comillas que nunca se asigna: shellcheck SC2154 y SC2086. |
-| `bad-indent.yaml` | Un valor de mapping indentado bajo un escalar: error de sintaxis YAML. |
-| `Dockerfile` | Imagen base sin tag y un `apt-get install` que no limpia. |
+| `broken/unquoted-var.sh` | Una variable sin comillas que nunca se asigna: shellcheck SC2154 y SC2086. |
+| `broken/bad-indent.yaml` | Un valor de mapping indentado bajo un escalar: error de sintaxis YAML. |
+| `broken/Dockerfile` | Imagen base sin tag y un `apt-get install` que no limpia. |
+| `valid/k8s/` | Un manifiesto plano, para que `kubeconform` tenga algo que validar. |
+| `valid/chart/` | Un chart mínimo. Sus templates son texto Go template, así que quedan fuera de `kubeconform` y se revisan solo vía `helm template`. |
+| `valid/policy/` | Una policy de kyverno con un test que pasa. |
+| `valid/terraform/` | Un módulo con README generado, que es lo que lo hace entrar al check de `terraform-docs`. |
 
-Estos archivos están excluidos de los checks del propio repositorio, en
-`.pre-commit-config.yaml` y en la lista de prune de `scan()` en
-`scripts/verify.sh`. Esa exclusión es lo que les permite seguir rotos mientras
-`make verify` sigue en verde. Si agregás un fixture acá, necesita su assertion
-correspondiente en `scripts/demo.sh`. Si no, es solo un archivo inválido que
-nadie mira.
+Agregar un fixture a `broken/` implica agregar su assertion en `scripts/demo.sh`;
+sin ella es solo un archivo inválido que nadie mira. Agregar uno a `valid/` no
+necesita nada: `make selftest` corre el gate entero, así que lo levanta la etapa
+que le corresponda.
+
+Python no está cubierto por `selftest`. La etapa de python busca `src/`, `tests/`
+y `pyproject.toml` en la raíz del repo, así que un fixture en un subdirectorio le
+resulta invisible.
