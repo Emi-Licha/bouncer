@@ -172,8 +172,10 @@ end to end, against the real runtime:
   an invalid one under `-strict`, its schema cache filling up, `helm template`
   on a stock chart, `terraform init -backend=false` and `validate`, `tflint`,
   `trivy config`, and `mypy --strict`.
-- Pathological filenames: a name holding a space, a quote or a newline is
-  detected, validated and reported without ever being split.
+- Pathological names: a space, a quote or a newline in a file *or directory*
+  name survives detection, validation and reporting without being split. What a
+  third-party tool then does with such a name is its own business; `tflint`, for
+  one, does not cope.
 - `bootstrap` on all three of its branches, and the exit code each returns: a
   complete toolchain, an incomplete one, and no package manager at all.
 - `make verify-full` skipping e2e when no cluster answers, plus `help`, `clean`,
@@ -387,8 +389,10 @@ macOS, punta a punta, contra el runtime real:
   rechazando uno inválido con `-strict`, su cache de schemas poblándose,
   `helm template` sobre un chart recién creado, `terraform init -backend=false`
   y `validate`, `tflint`, `trivy config`, y `mypy --strict`.
-- Nombres de archivo patológicos: uno con espacio, con comilla o con salto de
-  línea se detecta, se valida y se reporta sin partirse nunca.
+- Nombres patológicos: un espacio, una comilla o un salto de línea en el nombre
+  de un archivo *o de un directorio* sobrevive a la detección, la validación y el
+  reporte sin partirse. Lo que después haga una herramienta de terceros con ese
+  nombre es asunto suyo; `tflint`, por ejemplo, no lo maneja.
 - `bootstrap` en sus tres ramas, con el código de salida de cada una: toolchain
   completo, incompleto, y sin ningún gestor de paquetes.
 - `make verify-full` salteando e2e cuando no responde ningún cluster, más

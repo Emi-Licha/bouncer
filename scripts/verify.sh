@@ -44,7 +44,9 @@ need() {
 # run <label> <command...>: execute, print a one-line verdict, record failures.
 # The command runs inside $( ), i.e. a subshell, so a callee may cd freely.
 run() {
-  printf '  %-28s' "$1"
+  # Trailing space, not part of the padding: a label longer than the field runs
+  # straight into the verdict otherwise.
+  printf '  %-28s ' "$1"
   local out rc
   out=$("${@:2}" 2>&1); rc=$?
   if [ "$rc" -eq 0 ]; then
@@ -68,6 +70,17 @@ scan() {
 }
 
 count() { scan "$@" | tr -cd '\0' | wc -c | tr -d ' '; }
+
+# dirs_of <nul-file> <out-file>: unique parent directories, NUL in and NUL out.
+# `xargs -0 -n1 dirname` would be shorter but emits newlines, which re-splits any
+# directory whose name contains one: the whole point of carrying NUL this far.
+# ${f%/*} keeps the bytes intact and needs no subshell.
+dirs_of() {
+  local f
+  while IFS= read -r -d '' f; do
+    printf '%s\0' "${f%/*}"
+  done < "$1" | sort -zu > "$2"
+}
 
 # ---------------------------------------------------------------------------
 # stages
@@ -99,13 +112,13 @@ stage_untracked() {
 
 # in_chart <path>: true when the file lives inside a Helm chart.
 in_chart() {
-  [ -s "$TMP/chartdirs.txt" ] || return 1
+  [ -s "$TMP/chartdirs.z" ] || return 1
   local d
-  while IFS= read -r d; do
+  while IFS= read -r -d '' d; do
     case "$1" in
       "$d"/*) return 0 ;;
     esac
-  done < "$TMP/chartdirs.txt"
+  done < "$TMP/chartdirs.z"
   return 1
 }
 
@@ -116,8 +129,8 @@ stage_k8s() {
   # column 0, so detection would claim it, but it is Go template text rather
   # than YAML and kubeconform can only fail on it. Charts are checked by
   # `helm template` in stage_helm, which renders them first.
-  scan -name 'Chart.yaml' | xargs -0 -n1 dirname 2>/dev/null | sort -u \
-    > "$TMP/chartdirs.txt"
+  scan -name 'Chart.yaml' > "$TMP/chartfiles.z"
+  dirs_of "$TMP/chartfiles.z" "$TMP/chartdirs.z"
   # One pass, NUL in and NUL out. Chaining two `grep -l` calls would reintroduce
   # newline separation halfway through and mis-split any filename containing one.
   # The patterns tolerate indentation and a list dash so that a manifest nested
@@ -158,12 +171,12 @@ stage_helm() {
   fi
   echo "== helm =="
   need helm "helm charts" || return
-  xargs -0 -n1 dirname < "$TMP/charts.z" | sort -u > "$TMP/charts.txt"
+  dirs_of "$TMP/charts.z" "$TMP/helmdirs.z"
   # --validate is deliberately absent: it requires a live API server, and
   # verify must run without a cluster. Server-side validation is in verify-full.
-  while IFS= read -r c; do
+  while IFS= read -r -d '' c; do
     run "helm template $c" helm template "$c"
-  done < "$TMP/charts.txt"
+  done < "$TMP/helmdirs.z"
 }
 
 stage_policy() {
@@ -174,10 +187,10 @@ stage_policy() {
   fi
   echo "== policy =="
   need kyverno "kyverno test manifests" || return
-  xargs -0 -n1 dirname < "$TMP/kyv.z" | sort -u > "$TMP/kyv.txt"
-  while IFS= read -r d; do
+  dirs_of "$TMP/kyv.z" "$TMP/kyvdirs.z"
+  while IFS= read -r -d '' d; do
     run "kyverno test $d" kyverno test "$d"
-  done < "$TMP/kyv.txt"
+  done < "$TMP/kyvdirs.z"
 }
 
 # Called through run(), which executes it inside $( ), so the cd stays contained.
@@ -195,7 +208,8 @@ stage_terraform() {
   echo "== terraform =="
   # `terraform fmt` is handled by pre-commit; not repeated here.
   need terraform ".tf files" || return
-  scan -name '*.tf' | xargs -0 -n1 dirname | sort -u > "$TMP/tfdirs.txt"
+  scan -name '*.tf' > "$TMP/tffiles.z"
+  dirs_of "$TMP/tffiles.z" "$TMP/tfdirs.z"
 
   need tflint ".tf files" && run "tflint" tflint --recursive
   # trivy is pointed at the terraform directories rather than the repository
@@ -203,30 +217,38 @@ stage_terraform() {
   # which belong to other tools, and it ignores this file's prune list, so it
   # reported the fixtures in examples/broken that are invalid on purpose.
   if need trivy ".tf files"; then
-    while IFS= read -r d; do
+    while IFS= read -r -d '' d; do
       run "trivy config $d" trivy config --exit-code 1 --quiet "$d"
-    done < "$TMP/tfdirs.txt"
+    done < "$TMP/tfdirs.z"
   fi
-  # Like trivy, this is scoped per module. Pointed at the repository root it
-  # checks a directory that holds no .tf at all, decides the project's own
-  # README is missing terraform documentation, and fails.
-  if [ -f .terraform-docs.yml ]; then
-    if need terraform-docs ".terraform-docs.yml"; then
-      while IFS= read -r d; do
-        run "terraform-docs $d" terraform-docs markdown table --output-check "$d"
-      done < "$TMP/tfdirs.txt"
-    fi
-  else
+  # Scoped per module, and only where docs were opted into. Pointed at the
+  # repository root it checks a directory with no .tf at all and decides the
+  # project README is missing terraform documentation. Pointed at every
+  # directory holding a .tf it fails on examples/, which is a normal thing for a
+  # Terraform repository to have and which carries no generated docs. A README
+  # holding the BEGIN_TF_DOCS marker is the directory saying it wants them.
+  if [ ! -f .terraform-docs.yml ]; then
     skip "$(msg skip_tfdocs)"
+  elif ! grep -qE '^[[:space:]]*file[[:space:]]*:' .terraform-docs.yml; then
+    # With no output file configured, --output-check writes the rendered docs to
+    # stdout and exits 0 however stale the README is. It would report ok while
+    # checking nothing, so it is skipped out loud instead.
+    skip "$(msg skip_tfdocs_nooutput)"
+  elif need terraform-docs ".terraform-docs.yml"; then
+    while IFS= read -r -d '' d; do
+      if grep -q 'BEGIN_TF_DOCS' "$d/README.md" 2>/dev/null; then
+        run "terraform-docs $d" terraform-docs markdown table --output-check "$d"
+      fi
+    done < "$TMP/tfdirs.z"
   fi
   # Providers are downloaded from the network but need no cloud credentials.
   # The shared plugin cache keeps repeated runs inside the 3 minute budget.
   TF_PLUGIN_CACHE_DIR="${TF_PLUGIN_CACHE_DIR:-$HOME/.terraform.d/plugin-cache}"
   export TF_PLUGIN_CACHE_DIR
   mkdir -p "$TF_PLUGIN_CACHE_DIR"
-  while IFS= read -r d; do
+  while IFS= read -r -d '' d; do
     run "validate $d" tf_validate "$d"
-  done < "$TMP/tfdirs.txt"
+  done < "$TMP/tfdirs.z"
 }
 
 stage_python() {
@@ -270,10 +292,10 @@ stage_e2e() {
     skip "$(msg skip_e2e)"
     return
   fi
-  xargs -0 -n1 dirname < "$TMP/kz.z" | sort -u > "$TMP/kz.txt"
-  while IFS= read -r d; do
+  dirs_of "$TMP/kz.z" "$TMP/kzdirs.z"
+  while IFS= read -r -d '' d; do
     run "server dry-run $d" kubectl apply --dry-run=server -k "$d"
-  done < "$TMP/kz.txt"
+  done < "$TMP/kzdirs.z"
 }
 
 stage_doctor() {
