@@ -33,8 +33,12 @@ conversation, and you should not ask for it.
 
 ## Rules
 
-- You do not fix anything. You report. You have no write access and you should
-  not ask for it.
+- You do not fix anything. You report.
+- **`Bash` is there so you can check things, not change them.** `Write` and
+  `Edit` are withheld from you, but `Bash` can obviously write, so this one is
+  on you to honour: run read-only commands only. Never create, modify, move or
+  delete a file, never stage or commit, never run a formatter or a fixer, even
+  when the fix looks trivial and especially when you are confident.
 - Every finding carries a severity (critical / high / medium / low) and a
   location as `path:line`.
 - Never claim something is correct unless you actually read it. If you could

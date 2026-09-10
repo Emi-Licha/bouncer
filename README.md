@@ -142,10 +142,14 @@ files, so an untracked file skips the static pass entirely. Failing on that
 would block you constantly while you work, and a gate people switch off is worth
 nothing. The warning keeps the gap visible instead of silent.
 
-**The reviewer cannot write.** Its tool allowlist denies `Write` and `Edit`. It
-is not asked nicely in a prompt, it simply has no way to change your code. It
-also never sees the conversation, which is the point: it is not attached to
-decisions that were already made.
+**The reviewer is not supposed to write, and mostly cannot.** Its allowlist
+withholds `Write` and `Edit`, which takes away the convenient path. It does keep
+`Bash`, because a reviewer that cannot check whether a binary exists ends up
+inflating severities over guesses, and `Bash` can write files. So the last step
+of that prohibition is a rule in its prompt rather than a wall, and you should
+know that before pointing it at a repository you care about. It also never sees
+the conversation, which is the point: it is not attached to decisions that were
+already made.
 
 **The Stop hook gives up after three failures.** A check the agent cannot fix
 would otherwise loop forever. The counter resets when it releases, because
@@ -353,10 +357,14 @@ Fallar por eso te bloquearía todo el tiempo mientras trabajás, y un gate que l
 gente apaga no sirve para nada. La advertencia mantiene la grieta a la vista en
 vez de silenciosa.
 
-**El reviewer no puede escribir.** Su allowlist de herramientas le niega `Write`
-y `Edit`. No se lo pedimos amablemente en un prompt: directamente no tiene forma
-de tocarte el código. Tampoco ve la conversación, y eso es a propósito, porque
-así no queda apegado a decisiones que ya se tomaron.
+**El reviewer no debería escribir, y en general no puede.** Su allowlist le
+niega `Write` y `Edit`, que le saca el camino cómodo. Sí conserva `Bash`, porque
+un revisor que no puede comprobar si un binario existe termina inflando
+severidades sobre suposiciones, y con `Bash` se pueden escribir archivos. Así
+que el último tramo de esa prohibición es una regla de su prompt y no un muro,
+y conviene saberlo antes de apuntarlo a un repo que te importa. Tampoco ve la
+conversación, y eso es a propósito, porque así no queda apegado a decisiones que
+ya se tomaron.
 
 **El hook de Stop se rinde después de tres fallos.** Un check que el agente no
 puede arreglar generaría un loop infinito. El contador se resetea cuando libera,
