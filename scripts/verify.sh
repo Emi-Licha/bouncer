@@ -97,15 +97,36 @@ stage_untracked() {
   printf '%s\n' "$u" | sed 's/^/        /'
 }
 
+# in_chart <path>: true when the file lives inside a Helm chart.
+in_chart() {
+  [ -s "$TMP/chartdirs.txt" ] || return 1
+  local d
+  while IFS= read -r d; do
+    case "$1" in
+      "$d"/*) return 0 ;;
+    esac
+  done < "$TMP/chartdirs.txt"
+  return 1
+}
+
 stage_k8s() {
   scan \( -name '*.yaml' -o -name '*.yml' \) > "$TMP/yaml.z"
   : > "$TMP/k8s.z"
+  # Helm chart sources are left out. A template carries apiVersion and kind at
+  # column 0, so detection would claim it, but it is Go template text rather
+  # than YAML and kubeconform can only fail on it. Charts are checked by
+  # `helm template` in stage_helm, which renders them first.
+  scan -name 'Chart.yaml' | xargs -0 -n1 dirname 2>/dev/null | sort -u \
+    > "$TMP/chartdirs.txt"
   # One pass, NUL in and NUL out. Chaining two `grep -l` calls would reintroduce
   # newline separation halfway through and mis-split any filename containing one.
   # The patterns tolerate indentation and a list dash so that a manifest nested
   # inside a list is not silently skipped. A file that slips past detection is
   # never validated and nothing says so.
   while IFS= read -r -d '' f; do
+    if in_chart "$f"; then
+      continue
+    fi
     if grep -qE '^[[:space:]]*(-[[:space:]]+)?apiVersion:' "$f" 2>/dev/null &&
        grep -qE '^[[:space:]]*(-[[:space:]]+)?kind:' "$f" 2>/dev/null; then
       printf '%s\0' "$f" >> "$TMP/k8s.z"
@@ -174,8 +195,18 @@ stage_terraform() {
   echo "== terraform =="
   # `terraform fmt` is handled by pre-commit; not repeated here.
   need terraform ".tf files" || return
+  scan -name '*.tf' | xargs -0 -n1 dirname | sort -u > "$TMP/tfdirs.txt"
+
   need tflint ".tf files" && run "tflint" tflint --recursive
-  need trivy ".tf files"  && run "trivy config" trivy config --exit-code 1 --quiet .
+  # trivy is pointed at the terraform directories rather than the repository
+  # root. Given the root it also scans Dockerfiles and rendered chart templates,
+  # which belong to other tools, and it ignores this file's prune list, so it
+  # reported the fixtures in examples/broken that are invalid on purpose.
+  if need trivy ".tf files"; then
+    while IFS= read -r d; do
+      run "trivy config $d" trivy config --exit-code 1 --quiet "$d"
+    done < "$TMP/tfdirs.txt"
+  fi
   if [ -f .terraform-docs.yml ]; then
     need terraform-docs ".terraform-docs.yml" \
       && run "terraform-docs" terraform-docs markdown table --output-check .
@@ -187,7 +218,6 @@ stage_terraform() {
   TF_PLUGIN_CACHE_DIR="${TF_PLUGIN_CACHE_DIR:-$HOME/.terraform.d/plugin-cache}"
   export TF_PLUGIN_CACHE_DIR
   mkdir -p "$TF_PLUGIN_CACHE_DIR"
-  scan -name '*.tf' | xargs -0 -n1 dirname | sort -u > "$TMP/tfdirs.txt"
   while IFS= read -r d; do
     run "validate $d" tf_validate "$d"
   done < "$TMP/tfdirs.txt"
