@@ -149,7 +149,7 @@ msg_es() {
     boot_from_project)  printf 'desde su propio proyecto' ;;
 
     lint_failed)        printf 'LINT FALLÓ: %%s' ;;
-    stop_blocked)       printf '=== make verify FALLÓ (intento %%s/3): el turno no puede cerrar ===' ;;
+    stop_blocked)       printf '=== make verify FALLÓ (intento %%s/3): no se puede terminar el turno ===' ;;
     stop_released)      printf 'verify sigue fallando después de 3 intentos, se libera el gate' ;;
     *)                  printf '' ;;
   esac

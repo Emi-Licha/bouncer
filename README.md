@@ -2,6 +2,28 @@
 
 **[English](#english)** | **[Español](#español)**
 
+```text
+                ▄▄▄▄▄▄▄▄▄▄▄▄
+             ▄▄▓▓▓▓▓▓▓▓▓▓▓▓▓▓▄▄
+            ▄▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▄
+           ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+          ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+       ○  ▓▓████████████████████▓▓
+       ⌇  ▓▓████████████████████▓▓
+       ⌇  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+       ⌇  ▓▓▓▓▓▓▓▓▓██████▓▓▓▓▓▓▓▓▓
+          ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+          ▓▓▓▓▓▓▓▓████████▓▓▓▓▓▓▓▓
+          ▀▓▓▓▓▓▓▓████████▓▓▓▓▓▓▓▀
+            ▀▓▓▓▓▓▓██████▓▓▓▓▓▓▀
+              ▀▀▓▓▓▓▓██▓▓▓▓▓▀▀
+                ▀▀▓▓▓▓▓▓▓▓▀▀
+                  ▓▓▓▓▓▓▓▓
+          ▄▄▄▄▄▄▄▄████████▄▄▄▄▄▄▄▄
+        ████████████████████████████
+     ██████████████████████████████████
+```
+
 ## English
 
 Your agent tells you it is done. It usually is not.
@@ -309,8 +331,8 @@ vuelve a decir que terminó, y ahí se te fue la tarde. El problema no es que el
 modelo sea descuidado. Es que el modelo es el que se corrige a sí mismo.
 
 **Bouncer cierra el loop.** El agente actúa, un chequeo corre solo, la falla
-vuelve derecho a su contexto, y corrige sin que se lo pidas. No puede cerrar el
-turno hasta que el chequeo pase.
+vuelve derecho a su contexto, y corrige sin que se lo pidas. Y no puede terminar
+el turno, o sea devolverte el control, hasta que el chequeo pase.
 
 Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
 
@@ -326,11 +348,11 @@ Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
 │         │                 exit 2 le mete la queja derecho              │
 │         │                 en el contexto al agente                     │
 │         ▼                                                              │
-│   lo arregla solo, y recién ahí intenta cerrar el turno                │
+│   lo arregla solo, y recién ahí intenta terminar el turno              │
 │         │                                                              │
 │         ▼                                                              │
 │   hook Stop         ──▶  corre `make verify`, el gate entero           │
-│         │                 exit 2 bloquea el turno y le                 │
+│         │                 exit 2 le frena el turno y le                │
 │         │                 devuelve la falla como motivo                │
 │         │                                      │                       │
 │         │   ◀──────────────────────────────────┘  otra vuelta          │
@@ -345,10 +367,10 @@ Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
 Un patovica no discute si estás en la lista. Estar muy convencido de que estás en
 la lista no te hace entrar. Esa es toda la idea.
 
-Así se ve el hook de Stop negándose a dejar cerrar un turno:
+Así se ve el hook de Stop negándose a dejar terminar un turno:
 
 ```text
-=== make verify FALLÓ (intento 1/3): el turno no puede cerrar ===
+=== make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
 == static (pre-commit) ==
   pre-commit                   FAIL
       yamllint.......................................................Failed
@@ -397,7 +419,7 @@ busca secretos filtrados.
 pasa algo. Vos nunca lo llamás. Se dispara. Claude Code ofrece varios eventos;
 Bouncer usa dos. `PostToolUse` se dispara justo después de que se escribe un
 archivo, y lintea solo ese archivo. `Stop` se dispara cuando el turno está por
-cerrar, y corre el gate. El runtime le pasa al hook un JSON por entrada estándar,
+terminar, y corre el gate. El runtime le pasa al hook un JSON por entrada estándar,
 y después lee el **código de salida** del hook para decidir qué hacer. Ese código
 de salida es donde está toda la palanca, y donde casi todo el mundo se equivoca:
 
@@ -405,7 +427,7 @@ de salida es donde está toda la palanca, y donde casi todo el mundo se equivoca
 | --- | --- |
 | `0` | Todo bien, seguí. Al agente no se le dice nada. |
 | `1` | Lo toma como error no bloqueante y lo escribe en el log de debug. **El agente nunca lo ve.** |
-| `2` | Lee tu stderr y se lo pone adelante al agente. En `Stop`, además le bloquea el turno. |
+| `2` | Lee tu stderr y se lo pone adelante al agente. En `Stop`, además le frena el turno. |
 
 Armá un hook sobre exit 1 y va a parecer correcto para siempre sin lograr
 absolutamente nada. Bouncer usa exit 2 en los dos.
@@ -492,7 +514,7 @@ Así que no le creas a la configuración. Rompé algo y confirmá que te frenaro
 
 1. `/hooks` tiene que listar los dos, y decir de qué archivo salieron.
 2. Escribí un archivo con un error de lint real. Te tiene que volver.
-3. Rompé `make verify` e intentá cerrar el turno. Te tiene que bloquear.
+3. Rompé `make verify` e intentá terminar el turno. Te tiene que frenar.
 
 Si el paso 3 no te bloquea, no tenés gate, diga lo que diga la configuración.
 
@@ -564,7 +586,7 @@ real:
 - `PostToolUse` devolviendo un error de lint al contexto del agente.
 - `Stop` bloqueando un turno, la liberación al tercer intento, y el contador
   reseteándose.
-- `.claude/.skip-verify` cerrando un turno con el gate todavía en rojo.
+- `.claude/.skip-verify` dejando terminar un turno con el gate todavía en rojo.
 - Contenido real: `kubeconform` aceptando un manifiesto bueno y rechazando uno
   malo, `helm template` sobre un chart, `kyverno test` en los dos sentidos,
   `terraform validate`, `tflint`, `trivy`, `terraform-docs` sobre un módulo al
