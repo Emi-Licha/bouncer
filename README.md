@@ -164,15 +164,28 @@ end to end, against the real runtime:
 - `make demo` rejecting every fixture.
 - Both languages, across `verify`, `demo`, `doctor` and both hooks, including
   the message the Stop hook emits when it releases.
+- Against real content: `kubeconform` accepting a valid manifest and rejecting
+  an invalid one under `-strict`, its schema cache filling up, `helm template`
+  on a stock chart, `terraform init -backend=false` and `validate`, `tflint`,
+  `trivy config`, and `mypy --strict`.
 
 Not verified:
 
+- **`kyverno test` and `terraform-docs`.** Neither stage has ever run, because
+  nothing here has a policy test or a `.terraform-docs.yml`.
+- **`pytest` and the 85% coverage floor.** Never exercised.
+- **`make verify-full`.** No cluster was available. It reports that and skips.
 - **The apt/dnf path in `bootstrap.sh`.** Written, never run. Homebrew is the
   tested route, on macOS and Linuxbrew alike.
-- **The kubeconform schema cache.** The flag is accepted and the directory gets
-  created, but the machine this was written on could not reach the schema host,
-  so a warm cache was never actually observed.
-- **`make verify-full`.** No cluster was available. It reports that and skips.
+- **`bootstrap` actually installing something.** It has only ever run on a
+  machine where every tool was already present, so the branch that installs and
+  the one that lists what is still missing are both untried.
+- **The reviewer writing in Spanish**, and the claim that its allowlist stops it
+  from writing files. Neither has been put to the test.
+- **Filenames containing spaces or newlines**, which is what the NUL handling
+  throughout `verify.sh` exists for.
+- **The three minute budget** against a repository with real content. On this
+  one, which is nearly empty, `verify` takes about two seconds.
 
 ### Limits
 
@@ -355,15 +368,28 @@ macOS, punta a punta, contra el runtime real:
 - `make demo` rechazando todos los fixtures.
 - Los dos idiomas, en `verify`, `demo`, `doctor` y los dos hooks, incluido el
   mensaje que emite el hook de Stop cuando libera.
+- Contra contenido real: `kubeconform` aceptando un manifiesto válido y
+  rechazando uno inválido con `-strict`, su cache de schemas poblándose,
+  `helm template` sobre un chart recién creado, `terraform init -backend=false`
+  y `validate`, `tflint`, `trivy config`, y `mypy --strict`.
 
 Sin verificar:
 
+- **`kyverno test` y `terraform-docs`.** Ninguna de las dos etapas corrió nunca,
+  porque acá no hay ningún test de policy ni un `.terraform-docs.yml`.
+- **`pytest` y el piso de 85% de cobertura.** Nunca se ejercitó.
+- **`make verify-full`.** No había cluster disponible. Lo reporta y lo saltea.
 - **El camino apt/dnf de `bootstrap.sh`.** Escrito, nunca ejecutado. Homebrew es
   la ruta probada, tanto en macOS como en Linuxbrew.
-- **El cache de schemas de kubeconform.** El flag se acepta y el directorio se
-  crea, pero la máquina donde se escribió esto no podía alcanzar el host de
-  schemas, así que nunca se llegó a ver un cache caliente.
-- **`make verify-full`.** No había cluster disponible. Lo reporta y lo saltea.
+- **`bootstrap` instalando algo de verdad.** Solo corrió en una máquina donde ya
+  estaban todas las herramientas, así que la rama que instala y la que lista lo
+  que falta están las dos sin probar.
+- **El reviewer escribiendo en castellano**, y la afirmación de que su allowlist
+  le impide escribir archivos. Ninguna de las dos se puso a prueba.
+- **Nombres de archivo con espacios o saltos de línea**, que es justamente para
+  lo que existe todo el manejo de NUL en `verify.sh`.
+- **El presupuesto de tres minutos** contra un repo con contenido real. En este,
+  que está casi vacío, `verify` tarda unos dos segundos.
 
 ### Límites
 
