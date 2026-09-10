@@ -17,6 +17,20 @@ cd "$root" 2>/dev/null || exit 0
 [ -f Makefile ] || exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
+# The catalogue picks English or Spanish. Optional on purpose: if it is missing
+# the gate still blocks, it just explains itself in English.
+if [ -r scripts/messages.sh ]; then
+  # shellcheck source=scripts/messages.sh
+  . scripts/messages.sh
+else
+  msg() {
+    case "$1" in
+      stop_blocked)  printf '=== make verify FAILED (attempt %s/3): the turn cannot end ===' "$2" ;;
+      stop_released) printf 'verify keeps failing after 3 attempts, releasing the gate' ;;
+    esac
+  }
+fi
+
 input=$(cat 2>/dev/null) || exit 0
 sid=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 # session_id is external JSON and ends up in a filesystem path, so constrain it
@@ -45,12 +59,12 @@ if [ "$n" -ge 3 ]; then
   # Resetting here matters: without it the gate stays released for the rest of
   # the session instead of only for this deadlock.
   rm -f "$counter"
-  printf '{"systemMessage": "verify sigue fallando despues de 3 intentos, se libera el gate"}\n'
+  printf '{"systemMessage": "%s"}\n' "$(msg stop_released)"
   exit 0
 fi
 
 {
-  printf '=== make verify FAILED (attempt %s/3): the turn cannot end ===\n' "$n"
+  printf '%s\n' "$(msg stop_blocked "$n")"
   printf '%s\n' "$out" | tail -60
 } >&2
 exit 2

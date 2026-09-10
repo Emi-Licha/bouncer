@@ -65,3 +65,16 @@ Findings grouped by severity, highest first. For each: location, what is wrong,
 why it matters, and what a fix would have to address.
 
 Close with a short section listing anything you could not assess, and why.
+
+## Language
+
+Write the report in the language the repository is configured for, not the
+language the conversation happens to be in. Check it first:
+
+```bash
+make lang
+```
+
+`es` means write the report in Spanish. Anything else, including no answer at
+all, means English. Findings, severities and the closing section all follow that
+choice; identifiers, paths and tool output stay as they are.

@@ -12,6 +12,11 @@
 # Written for bash 3.2 (macOS): no associative arrays, no mapfile, no ${var,,}.
 set -uo pipefail
 
+# Everything printed here goes through msg(), so the harness can speak
+# English or Spanish. scripts/messages.sh explains how it picks.
+# shellcheck source=scripts/messages.sh
+. "$(dirname "$0")/messages.sh"
+
 STAGE="${1:-core}"
 TMP=.verify-tmp
 MISSING=""
@@ -32,7 +37,7 @@ need() {
   if command -v "$1" >/dev/null 2>&1; then
     return 0
   fi
-  MISSING="${MISSING}  - $1 (required by: $2)"$'\n'
+  MISSING="${MISSING}  - $1 $(msg required_by "$2")"$'\n'
   return 1
 }
 
@@ -71,7 +76,7 @@ count() { scan "$@" | tr -cd '\0' | wc -c | tr -d ' '; }
 stage_lint() {
   echo "== static (pre-commit) =="
   if [ ! -f .pre-commit-config.yaml ]; then
-    skip "pre-commit (no .pre-commit-config.yaml)"
+    skip "$(msg skip_precommit)"
     return
   fi
   need pre-commit ".pre-commit-config.yaml" || return
@@ -88,7 +93,7 @@ stage_untracked() {
   local u
   u=$(git ls-files --others --exclude-standard)
   [ -n "$u" ] || return
-  printf '\n%swarn%s  untracked files are invisible to pre-commit:\n' "$Y" "$O"
+  printf '\n%swarn%s  %s\n' "$Y" "$O" "$(msg untracked_warn)"
   printf '%s\n' "$u" | sed 's/^/        /'
 }
 
@@ -107,7 +112,7 @@ stage_k8s() {
     fi
   done < "$TMP/yaml.z"
   if [ ! -s "$TMP/k8s.z" ]; then
-    skip "kubeconform (no kubernetes manifests)"
+    skip "$(msg skip_k8s)"
     return
   fi
   echo "== kubernetes =="
@@ -127,7 +132,7 @@ stage_k8s() {
 stage_helm() {
   scan -name 'Chart.yaml' > "$TMP/charts.z"
   if [ ! -s "$TMP/charts.z" ]; then
-    skip "helm (no charts)"
+    skip "$(msg skip_helm)"
     return
   fi
   echo "== helm =="
@@ -143,7 +148,7 @@ stage_helm() {
 stage_policy() {
   scan \( -name 'kyverno-test.yaml' -o -name 'kyverno-test.yml' \) > "$TMP/kyv.z"
   if [ ! -s "$TMP/kyv.z" ]; then
-    skip "kyverno (no policy tests)"
+    skip "$(msg skip_policy)"
     return
   fi
   echo "== policy =="
@@ -163,7 +168,7 @@ tf_validate() {
 
 stage_terraform() {
   if [ "$(count -name '*.tf')" -eq 0 ]; then
-    skip "terraform (no .tf files)"
+    skip "$(msg skip_terraform)"
     return
   fi
   echo "== terraform =="
@@ -175,7 +180,7 @@ stage_terraform() {
     need terraform-docs ".terraform-docs.yml" \
       && run "terraform-docs" terraform-docs markdown table --output-check .
   else
-    skip "terraform-docs (no .terraform-docs.yml)"
+    skip "$(msg skip_tfdocs)"
   fi
   # Providers are downloaded from the network but need no cloud credentials.
   # The shared plugin cache keeps repeated runs inside the 3 minute budget.
@@ -190,7 +195,7 @@ stage_terraform() {
 
 stage_python() {
   if [ "$(count -name '*.py')" -eq 0 ]; then
-    skip "python (no .py files)"
+    skip "$(msg skip_python)"
     return
   fi
   echo "== python =="
@@ -198,25 +203,25 @@ stage_python() {
   if [ -d src ]; then
     need mypy "src/ with python files" && run "mypy --strict" mypy --strict src/
   else
-    skip "mypy (no src/)"
+    skip "$(msg skip_mypy)"
   fi
   if [ -d tests ] && [ -f pyproject.toml ]; then
     need uv "python tests" && run "pytest" \
       uv run --with pytest --with pytest-cov pytest -q --cov --cov-fail-under=85
   else
-    skip "pytest (needs tests/ and pyproject.toml)"
+    skip "$(msg skip_pytest)"
   fi
 }
 
 stage_e2e() {
   echo "== e2e =="
   if ! command -v kubectl >/dev/null 2>&1 || ! kubectl cluster-info >/dev/null 2>&1; then
-    printf '  %swarn%s  skipped: no reachable cluster\n' "$Y" "$O"
+    printf '  %swarn%s  %s\n' "$Y" "$O" "$(msg no_cluster)"
     return
   fi
   scan -name 'kustomization.yaml' > "$TMP/kz.z"
   if [ ! -s "$TMP/kz.z" ]; then
-    skip "e2e (no kustomizations)"
+    skip "$(msg skip_e2e)"
     return
   fi
   xargs -0 -n1 dirname < "$TMP/kz.z" | sort -u > "$TMP/kz.txt"
@@ -226,14 +231,15 @@ stage_e2e() {
 }
 
 stage_doctor() {
-  printf '%-16s %s\n' "TOOL" "STATUS"
+  printf '%s: %s\n\n' "$(msg lang_active)" "$HARNESS_LANG_ACTIVE"
+  printf '%-16s %s\n' "$(msg doctor_tool)" "$(msg doctor_status)"
   for t in pre-commit gitleaks yamllint kubeconform helm kyverno terraform \
            tflint terraform-docs trivy actionlint shellcheck hadolint \
            markdownlint ruff mypy uv kubectl; do
     if command -v "$t" >/dev/null 2>&1; then
-      printf '%-16s %sok%s\n' "$t" "$G" "$O"
+      printf '%-16s %s%s%s\n' "$t" "$G" "$(msg doctor_ok)" "$O"
     else
-      printf '%-16s %smissing%s\n' "$t" "$R" "$O"
+      printf '%-16s %s%s%s\n' "$t" "$R" "$(msg doctor_missing)" "$O"
     fi
   done
 }
@@ -265,23 +271,23 @@ case "$STAGE" in
     stage_untracked
     ;;
   *)
-    printf 'unknown stage: %s (expected: lint, core, full, doctor)\n' "$STAGE" >&2
+    printf '%s\n' "$(msg unknown_stage "$STAGE")" >&2
     exit 64
     ;;
 esac
 
 if [ -n "$SKIPPED" ]; then
-  printf '\nskipped (no such content in this repo):\n%s' "$SKIPPED"
+  printf '\n%s\n%s' "$(msg skipped_header)" "$SKIPPED"
 fi
 if [ -n "$MISSING" ]; then
-  printf '\n%sMISSING TOOLS%s (the repo has content that requires them). Run: make bootstrap\n%s' \
-    "$R" "$O" "$MISSING"
+  printf '\n%s%s%s %s\n%s' \
+    "$R" "$(msg missing_tools)" "$O" "$(msg missing_tools_hint)" "$MISSING"
 fi
 if [ -n "$FAILED" ]; then
-  printf '\n%sFAILED CHECKS%s:\n%s' "$R" "$O" "$FAILED"
+  printf '\n%s%s%s\n%s' "$R" "$(msg failed_checks)" "$O" "$FAILED"
 fi
 if [ -n "$MISSING" ] || [ -n "$FAILED" ]; then
   exit 1
 fi
 
-printf '\n%sverify OK%s\n' "$G" "$O"
+printf '\n%s%s%s\n' "$G" "$(msg verify_ok)" "$O"

@@ -64,12 +64,39 @@ make demo
 invalid on purpose. It fails if any of them is *not* rejected, so it tells you
 the gate is awake rather than asking you to assume it.
 
+### Language
+
+Everything the harness prints is in English by default, and so are the
+reviewer's reports. Both can speak Spanish instead.
+
+Just for you, leaving the repository untouched:
+
+```bash
+HARNESS_LANG=es make verify
+```
+
+For everyone who clones it, commit a `.harness.conf` in the root:
+
+```ini
+lang = es
+```
+
+The environment variable wins over the file, so a shared default and a personal
+preference never have to fight. Any value that is not `es` resolves to English,
+which means a typo degrades quietly instead of printing message keys at you.
+`make lang` tells you which one is active right now.
+
+Adding a third language means adding one case block to `scripts/messages.sh`.
+Keys missing from it fall back to English rather than breaking, so a partial
+translation is usable from the first string.
+
 ### The pieces
 
 | Path | What it does |
 | --- | --- |
-| `Makefile` | `verify` is the canonical gate. Also `lint`, `verify-full`, `demo`, `doctor`, `bootstrap`. |
+| `Makefile` | `verify` is the canonical gate. Also `lint`, `verify-full`, `demo`, `doctor`, `lang`, `bootstrap`. |
 | `scripts/verify.sh` | The engine. The logic lives here because macOS ships GNU Make 3.81, which has no `.ONESHELL`. |
+| `scripts/messages.sh` | Every string the harness prints, in English and Spanish. |
 | `.claude/hooks/lint-changed.sh` | `PostToolUse` on `Edit\|Write`. Lints only the file just written, in under two seconds. |
 | `.claude/hooks/verify-on-stop.sh` | `Stop`. Runs `make verify` and blocks the turn while it fails. |
 | `.claude/agents/reviewer.md` | Reviews finished work with no memory of how it was built. |
@@ -135,6 +162,8 @@ end to end, against the real runtime:
 - The three-strike release, and the counter resetting afterwards.
 - `.claude/.skip-verify` closing a turn with the gate still red.
 - `make demo` rejecting every fixture.
+- Both languages, across `verify`, `demo`, `doctor` and both hooks, including
+  the message the Stop hook emits when it releases.
 
 Not verified:
 
@@ -222,12 +251,39 @@ make demo
 inválidos a propósito. Falla si alguno *no* es rechazado, así que te avisa que
 el gate está despierto en vez de pedirte que lo supongas.
 
+### Idioma
+
+Todo lo que imprime el arnés está en inglés por defecto, y los informes del
+reviewer también. Los dos pueden hablar castellano.
+
+Solo para vos, sin tocar el repositorio:
+
+```bash
+HARNESS_LANG=es make verify
+```
+
+Para todos los que lo clonen, commiteá un `.harness.conf` en la raíz:
+
+```ini
+lang = es
+```
+
+La variable de entorno le gana al archivo, así que un default compartido y una
+preferencia personal nunca tienen que pelearse. Cualquier valor que no sea `es`
+resuelve a inglés, o sea que un error de tipeo degrada en silencio en vez de
+imprimirte claves de mensajes. `make lang` te dice cuál está activo ahora.
+
+Agregar un tercer idioma es agregar un bloque `case` a `scripts/messages.sh`.
+Las claves que falten caen a inglés en vez de romperse, así que una traducción
+parcial ya sirve desde la primera cadena.
+
 ### Las piezas
 
 | Ruta | Qué hace |
 | --- | --- |
-| `Makefile` | `verify` es el gate canónico. También están `lint`, `verify-full`, `demo`, `doctor` y `bootstrap`. |
+| `Makefile` | `verify` es el gate canónico. También están `lint`, `verify-full`, `demo`, `doctor`, `lang` y `bootstrap`. |
 | `scripts/verify.sh` | El motor. La lógica vive acá porque macOS trae GNU Make 3.81, que no tiene `.ONESHELL`. |
+| `scripts/messages.sh` | Todas las cadenas que imprime el arnés, en inglés y castellano. |
 | `.claude/hooks/lint-changed.sh` | `PostToolUse` con matcher `Edit\|Write`. Lintea solo el archivo recién escrito, en menos de dos segundos. |
 | `.claude/hooks/verify-on-stop.sh` | `Stop`. Corre `make verify` y bloquea el turno mientras falle. |
 | `.claude/agents/reviewer.md` | Revisa trabajo terminado sin memoria de cómo se construyó. |
@@ -297,6 +353,8 @@ macOS, punta a punta, contra el runtime real:
 - La liberación al tercer intento, y el contador reseteándose después.
 - `.claude/.skip-verify` cerrando un turno con el gate todavía en rojo.
 - `make demo` rechazando todos los fixtures.
+- Los dos idiomas, en `verify`, `demo`, `doctor` y los dos hooks, incluido el
+  mensaje que emite el hook de Stop cuando libera.
 
 Sin verificar:
 

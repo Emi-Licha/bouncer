@@ -23,6 +23,17 @@ file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null
 # outside it, and the linter's output, which quotes the file, reaches the
 # model's context.
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
+# The catalogue picks English or Spanish. It is optional on purpose: a hook that
+# cannot find it should still report the error, just in English.
+cd "$root" 2>/dev/null || true
+if [ -r "$root/scripts/messages.sh" ]; then
+  # shellcheck source=scripts/messages.sh
+  . "$root/scripts/messages.sh"
+else
+  msg() { shift; printf 'LINT FAILED: %s' "$1"; }
+fi
+
 # Containment only means anything on canonical paths, so when they cannot be
 # resolved the hook declines to lint at all rather than falling back to the
 # literal test a symlink defeats. Losing lint feedback is acceptable; reading a
@@ -72,5 +83,5 @@ esac
 
 [ "$rc" -eq 0 ] && exit 0
 
-printf 'LINT FAILED: %s\n%s\n' "$file" "$out" >&2
+printf '%s\n%s\n' "$(msg lint_failed "$file")" "$out" >&2
 exit 2

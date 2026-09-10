@@ -8,6 +8,9 @@
 # `make doctor` rather than trusting that it finished the job.
 set -euo pipefail
 
+# shellcheck source=scripts/messages.sh
+. "$(dirname "$0")/messages.sh"
+
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # Every tool the gate can call. `make doctor` reports on the same list.
@@ -16,15 +19,15 @@ TOOLS="pre-commit gitleaks yamllint kubeconform helm kyverno terraform tflint
        mypy uv kubectl"
 
 install_with_brew() {
-  echo "== installing toolchain with homebrew =="
+  msg boot_brew; echo
   for pkg in \
     pre-commit gitleaks yamllint kubeconform helm kyverno terraform \
     terraform-docs trivy actionlint shellcheck hadolint markdownlint-cli \
     uv ruff mypy kubernetes-cli; do
     if brew list --versions "$pkg" >/dev/null 2>&1; then
-      printf '  %-20s already installed\n' "$pkg"
+      printf '  %-20s %s\n' "$pkg" "$(msg boot_already)"
     else
-      printf '  %-20s installing...\n' "$pkg"
+      printf '  %-20s %s\n' "$pkg" "$(msg boot_installing)"
       brew install "$pkg" >/dev/null
     fi
   done
@@ -32,16 +35,16 @@ install_with_brew() {
   # tflint is not in homebrew-core. It ships from the upstream project's own
   # tap; `brew install tflint` resolves to an unrelated cask named "tint".
   if have tflint; then
-    printf '  %-20s already installed\n' "tflint"
+    printf '  %-20s %s\n' "tflint" "$(msg boot_already)"
   else
-    printf '  %-20s installing from terraform-linters/tap...\n' "tflint"
+    printf '  %-20s %s\n' "tflint" "$(msg boot_tap)"
     brew install terraform-linters/tap/tflint >/dev/null
   fi
 }
 
 # UNTESTED. Only covers what the distribution repositories carry directly.
 install_with_apt() {
-  echo "== installing what apt carries (UNTESTED PATH) =="
+  msg boot_apt; echo
   sudo apt-get update
   sudo apt-get install -y yamllint shellcheck python3-pip
   pip3 install --user pre-commit ruff mypy
@@ -49,7 +52,7 @@ install_with_apt() {
 
 # UNTESTED. Note that Fedora spells shellcheck with capitals.
 install_with_dnf() {
-  echo "== installing what dnf carries (UNTESTED PATH) =="
+  msg boot_dnf; echo
   sudo dnf install -y yamllint ShellCheck python3-pip
   pip3 install --user pre-commit ruff mypy
 }
@@ -64,7 +67,7 @@ report_missing() {
   [ -n "$missing" ] || return 0
 
   echo
-  echo "Still missing, install these yourself:"
+  msg boot_still_missing; echo
   for t in $missing; do
     case "$t" in
       gitleaks)       printf '  %-16s github: gitleaks/gitleaks\n' "$t" ;;
@@ -76,13 +79,11 @@ report_missing() {
       hadolint)       printf '  %-16s github: hadolint/hadolint\n' "$t" ;;
       markdownlint)   printf '  %-16s npm: markdownlint-cli\n' "$t" ;;
       uv)             printf '  %-16s github: astral-sh/uv\n' "$t" ;;
-      *)              printf '  %-16s from its own project\n' "$t" ;;
+      *)              printf '  %-16s %s\n' "$t" "$(msg boot_from_project)" ;;
     esac
   done
   echo
-  echo "The gate only fails on a missing tool when the repository actually has"
-  echo "content that needs it, so an incomplete toolchain is not necessarily a"
-  echo "problem. Run 'make doctor' to see where you stand."
+  msg boot_missing_note; echo
   return 1
 }
 
@@ -93,15 +94,14 @@ elif have apt-get; then
 elif have dnf; then
   install_with_dnf
 else
-  echo "No supported package manager found (brew, apt-get, dnf)." >&2
-  echo "Install the tools listed by 'make doctor' by hand." >&2
+  { msg boot_no_pm; echo; msg boot_no_pm_hint; echo; } >&2
   exit 1
 fi
 
-echo "== installing git hooks =="
+msg boot_hooks; echo
 pre-commit install
 
-echo "== warming pre-commit environments =="
+msg boot_warming; echo
 # The first run downloads hook environments. Doing it here is what keeps
 # `make verify` inside its budget from then on.
 pre-commit run --all-files >/dev/null 2>&1 || true
@@ -111,4 +111,4 @@ if ! report_missing; then
   exit 1
 fi
 
-echo "bootstrap done. Run: make doctor"
+msg boot_done; echo

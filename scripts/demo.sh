@@ -8,6 +8,12 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
+
+# Sourced after the cd, because the language file is read from the
+# repository root.
+# shellcheck source=scripts/messages.sh
+. scripts/messages.sh
+
 DIR=examples/broken
 missed=0
 
@@ -23,34 +29,34 @@ expect_reject() {
   shift 2
   printf '\n%s\n' "--- $label"
   if ! command -v "$tool" >/dev/null 2>&1; then
-    printf '  %sskipped%s: %s is not installed. Run: make bootstrap\n' "$Y" "$O" "$tool"
+    printf '  %sskipped%s: %s\n' "$Y" "$O" "$(msg demo_skipped "$tool")"
     return
   fi
   local out rc
   out=$("$@" 2>&1); rc=$?
   printf '%s\n' "$out" | sed 's/^/    /'
   if [ "$rc" -ne 0 ]; then
-    printf '  %sthe gate caught it%s (exit %s)\n' "$G" "$O" "$rc"
+    printf '  %s%s%s\n' "$G" "$(msg demo_caught "$rc")" "$O"
   else
-    printf '  %sTHE GATE MISSED IT%s: a non-zero exit was expected\n' "$R" "$O"
+    printf '  %s%s%s\n' "$R" "$(msg demo_missed)" "$O"
     missed=1
   fi
 }
 
-echo "Each fixture below is broken on purpose. Every check is expected to fail."
+msg demo_intro; echo
 
-expect_reject shellcheck "shellcheck: an unquoted, undefined variable" \
+expect_reject shellcheck "$(msg demo_case_shell)" \
   shellcheck -x "$DIR/unquoted-var.sh"
 
-expect_reject yamllint "yamllint: invalid indentation" \
+expect_reject yamllint "$(msg demo_case_yaml)" \
   yamllint -s "$DIR/bad-indent.yaml"
 
-expect_reject hadolint "hadolint: untagged base image, no apt cleanup" \
+expect_reject hadolint "$(msg demo_case_docker)" \
   hadolint "$DIR/Dockerfile"
 
 if [ "$missed" -ne 0 ]; then
-  printf '\n%sdemo FAILED%s: at least one fixture was not rejected.\n' "$R" "$O"
+  printf '\n%s%s%s\n' "$R" "$(msg demo_failed)" "$O"
   exit 1
 fi
 
-printf '\n%sdemo OK%s: every fixture was rejected, as it should be.\n' "$G" "$O"
+printf '\n%s%s%s\n' "$G" "$(msg demo_ok)" "$O"
