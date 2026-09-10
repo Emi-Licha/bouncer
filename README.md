@@ -4,258 +4,226 @@
 
 ## English
 
-An agent that checks its own work will pass itself. This is a setup where it
-cannot: one command decides whether the work is done, and hooks run it whether
-the agent feels like it or not.
+Your coding agent decides when it is finished. This takes that decision away
+from it.
 
-Tested on macOS. Before trusting any of this, read
-[What is verified](#what-is-verified).
-
-### The problem
-
-You end up being the linter. You read the diff, you spot the unquoted variable,
-you say something, you wait. Then it happens again on the next file.
-
-A better prompt does not fix this, because the agent is still the one deciding
-whether it is finished. What fixes it is a gate the agent cannot open.
-
-### How the loop closes
+One command says whether the work passes. Two hooks run that command whether the
+agent feels like it or not. If it does not pass, the turn does not end.
 
 ```text
-  you edit a file
-        |
-        v
-  PostToolUse hook  ->  lints just that file
-                        exit 2 puts the error into the agent's context,
-                        so the next step fixes it without you asking
-
-  the turn tries to end
-        |
-        v
-  Stop hook         ->  runs `make verify`
-                        exit 2 means the turn cannot end,
-                        and the output becomes the reason why
+=== make verify FAILED (attempt 1/3): the turn cannot end ===
+== static (pre-commit) ==
+  pre-commit                   FAIL
+      yamllint.......................................................Failed
+      config.yaml
+        2:4  error  syntax error: mapping values are not allowed here
 ```
 
-Two exit codes carry most of the design. Getting them wrong is the usual reason
-a harness like this quietly does nothing:
+That is an agent stopped mid-sentence. It cannot answer you until the repository
+is clean again.
 
-| Exit | What actually happens |
-| --- | --- |
-| `0` | Success. Nothing reaches the agent. |
-| `1` | Non-blocking error. It goes to the debug log only, so the agent never sees it. A hook built on exit 1 looks right and does nothing. |
-| `2` | On `PostToolUse`, your stderr is shown to the agent as a warning (the edit still stands). On `Stop`, the turn is blocked and your stderr becomes the reason. |
+On the way in, the same idea at a smaller scale. Edit a file and the linter comes
+back on its own, without you asking:
 
-### Quick start
+```text
+PostToolUse:Edit hook returned blocking error
+LINT FAILED: demo.sh
+  echo $undefined_target
+       ^-------------^ SC2154: undefined_target is referenced but not assigned.
+```
+
+You stop being the linter.
+
+### Try it in three commands
 
 ```bash
 make bootstrap
 ```
 
-Now restart your Claude Code session. That step is not optional, and
-[the failure that looks like success](#the-failure-that-looks-like-success)
-explains why. Then check that the gate really works:
+Then restart your Claude Code session. That step is not optional, and
+[the part everyone gets wrong](#the-part-everyone-gets-wrong) explains why.
 
 ```bash
 make demo
 ```
 
-`make demo` runs the linters against files in `examples/broken/` that are
-invalid on purpose. It fails if any of them is *not* rejected. Then the other
-half:
+Runs the gate over `examples/broken/`, which is invalid on purpose, and fails if
+anything is *not* rejected.
 
 ```bash
 make selftest
 ```
 
-`make selftest` runs the gate itself over `examples/valid/`, which holds a real
-module, chart, policy and manifest, and it has to pass. Between the two you have
-watched the gate reject what it should and accept what it should, on your own
-machine, without taking either on faith.
+Runs the gate over `examples/valid/`, which holds a real module, chart, policy
+and manifest, and has to pass.
 
-### Language
+Between the two you have watched it reject what it should and accept what it
+should, on your own machine, in about ten seconds. Nothing here asks to be taken
+on faith.
 
-Everything the harness prints is in English by default, and so are the
-reviewer's reports. Both can speak Spanish instead.
+### What you get
 
-Just for you, leaving the repository untouched:
+| Command | What it does |
+| --- | --- |
+| `make verify` | The gate. Everything else is built around this one command. |
+| `make lint` | The fast half on its own. |
+| `make verify-full` | Adds a server-side dry run against a live cluster. |
+| `make demo` | Proves the gate still catches things. |
+| `make selftest` | Proves the gate still accepts good things. |
+| `make doctor` | Which tools you have and which you are missing. |
+| `make bootstrap` | Installs them. |
+
+It works out what your repository actually contains and runs only what applies:
+Kubernetes manifests, Helm charts, Kyverno policies, Terraform, Python, shell,
+Dockerfiles, GitHub Actions, Markdown, YAML, and a secret scan. Add Terraform
+next month and nothing here needs editing.
+
+### How it works
+
+```text
+  you edit a file
+        |
+        v
+  PostToolUse hook  ->  lints that one file, in under two seconds
+                        exit 2 puts the error in the agent's context
+
+  the turn tries to end
+        |
+        v
+  Stop hook         ->  runs `make verify`
+                        exit 2 means the turn cannot end
+```
+
+Seven pieces, and none of them is clever:
+
+| Path | What it is |
+| --- | --- |
+| `Makefile` | The commands above. |
+| `scripts/verify.sh` | The engine. It lives here because macOS ships GNU Make 3.81, which has no `.ONESHELL`. |
+| `scripts/messages.sh` | Every string it prints, in English and Spanish. |
+| `.claude/hooks/` | The two hooks. |
+| `.claude/agents/reviewer.md` | A reviewer that reads your diff with no memory of how it was written. |
+| `.pre-commit-config.yaml` | The single definition of every fast static check. |
+| `CLAUDE.md` | The rules. Mainly: fix the cause, never disable the check. |
+
+### The part everyone gets wrong
+
+Two ways this looks like it is working while doing nothing at all.
+
+**Exit 1 is not exit 2.** A hook that exits 1 reports a non-blocking error that
+goes to the debug log, and the agent never sees it. Only exit 2 puts your stderr
+in front of the model. Build a hook on exit 1 and it will look correct forever
+while achieving nothing.
+
+**Hooks are read when a session starts.** Write `.claude/settings.json` in the
+middle of a session and nothing is armed. Every file is right, the config is
+valid, no hook runs. A wrong path in that file behaves identically, quietly, as
+a non-blocking error.
+
+So do not trust the config. Break something and confirm you were stopped:
+
+1. `/hooks` should list both, and say which file they came from.
+2. Write a file with a real lint error. It has to come back to you.
+3. Break `make verify`, then try to end the turn. You have to be blocked.
+
+If step 3 does not block you, you do not have a gate, whatever the config says.
+
+### Make it yours
+
+Everything it prints, and the reviewer's reports, are in English by default. For
+Spanish, either just for you:
 
 ```bash
 HARNESS_LANG=es make verify
 ```
 
-For everyone who clones it, commit a `.harness.conf` in the root:
+or for everyone who clones it, with a `.harness.conf` in the root:
 
 ```ini
 lang = es
 ```
 
-The environment variable wins over the file, so a shared default and a personal
-preference never have to fight. Any value that is not `es` resolves to English,
-which means a typo degrades quietly instead of printing message keys at you.
-`make lang` tells you which one is active right now.
+The variable beats the file, so a team default and a personal preference never
+have to fight. `make lang` says which is active. A third language is one `case`
+block in `scripts/messages.sh`, and missing keys fall back to English, so a half
+finished translation still works.
 
-Adding a third language means adding one case block to `scripts/messages.sh`.
-Keys missing from it fall back to English rather than breaking, so a partial
-translation is usable from the first string.
-
-### The pieces
-
-| Path | What it does |
-| --- | --- |
-| `Makefile` | `verify` is the canonical gate. Also `lint`, `verify-full`, `demo`, `selftest`, `doctor`, `lang`, `bootstrap`. |
-| `examples/` | `broken/` must be rejected by `make demo`; `valid/` must be accepted by `make selftest`. |
-| `scripts/verify.sh` | The engine. The logic lives here because macOS ships GNU Make 3.81, which has no `.ONESHELL`. |
-| `scripts/messages.sh` | Every string the harness prints, in English and Spanish. |
-| `.claude/hooks/lint-changed.sh` | `PostToolUse` on `Edit\|Write`. Lints only the file just written, in under two seconds. |
-| `.claude/hooks/verify-on-stop.sh` | `Stop`. Runs `make verify` and blocks the turn while it fails. |
-| `.claude/agents/reviewer.md` | Reviews finished work with no memory of how it was built. |
-| `.pre-commit-config.yaml` | The single definition of every fast static check. |
-| `CLAUDE.md` | The rules. Mainly: fix the cause, never disable the check. |
-
-### The failure that looks like success
-
-This is the part worth reading twice.
-
-**Hooks are read when a session starts.** If you write `.claude/settings.json`
-in the middle of a session, nothing is armed. Every file is correct, the config
-is valid, and no hook runs. A wrong path in that file behaves identically,
-because a hook that cannot be found is treated as a non-blocking error.
-
-Both cases leave you believing you have a gate when you have nothing. So the
-only honest test is to break something deliberately and confirm you were
-stopped:
-
-1. Run `/hooks` and confirm both appear, and which file they came from.
-2. Write a file with a real lint error. The error has to come back to you.
-3. Break `make verify`, then try to end the turn. You have to be blocked.
-
-If step 3 does not block you, you do not have a gate, whatever the config says.
-
-### Design decisions
-
-**It detects, it does not assume.** `verify` looks at what the repository
-actually contains and runs only what applies. Adding Terraform later needs no
-edit here.
+### Design notes
 
 **Missing content is skipped. A missing tool is not.** No `.tf` files means the
-Terraform checks are skipped, and that is honest. But `.tf` files with no
-`tflint` installed is a hard failure, because otherwise the gate goes green for
-the worst possible reason: nothing is installed to catch anything.
+Terraform checks are skipped, which is honest. But `.tf` files with no `tflint`
+installed is a hard failure, because otherwise the gate goes green for the worst
+possible reason: nothing is installed to catch anything.
 
 **`kubeconform ok` does not mean every manifest was checked.**
 `-ignore-missing-schemas` is what lets a CRD through, and it is also how a run
-reports success having validated a fraction of what it read: a Kustomization and
-two kyverno resources are skipped in silence. The stage prints the skipped count
-for that reason, so nobody reads a green line as more coverage than it is.
+reports success having validated a fraction of what it read. The stage prints the
+skipped count, so a green line is not mistaken for more coverage than it is.
 
-**The coverage floor is 85%, and only for `src/` layouts.** Coverage is measured
-against `src/` rather than everything, because a bare `--cov` counts the test
-files, which are close to fully covered by definition and lift the total over the
-line: 75% source plus 100% tests reports 89%. Where a project has no `src/` to
-scope to, the floor is dropped and said so out loud, on the grounds that a
-threshold going green for the wrong reason is worse than admitting there is none.
+**The coverage floor is 85%, and only for `src/` layouts.** A bare `--cov` counts
+the test files, which are close to fully covered by definition and drag the total
+over the line: 75% source plus 100% tests reports 89%. Without a `src/` to scope
+to, the floor is dropped out loud, because a threshold that goes green for the
+wrong reason is worse than no threshold.
 
-**`pre-commit` is the only place static checks are defined**, and `make verify`
-runs it first. Its linters are `repo: local`, so they call the same binaries
-`make bootstrap` installs and cannot drift to a different version.
+**Untracked files warn, they do not fail.** `pre-commit` only sees tracked files,
+so an untracked one skips the static pass. Failing on that would block you all
+day, and a gate people switch off is worth nothing. The warning keeps the hole
+visible instead of silent.
 
-**Untracked files warn, they do not fail.** `pre-commit` only sees tracked
-files, so an untracked file skips the static pass entirely. Failing on that
-would block you constantly while you work, and a gate people switch off is worth
-nothing. The warning keeps the gap visible instead of silent.
+**The Stop hook gives up after three tries.** A check the agent cannot fix would
+otherwise loop forever. The counter resets on release, because without that the
+gate stays open for the rest of the session.
 
-**The reviewer is not supposed to write, and mostly cannot.** Its allowlist
-withholds `Write` and `Edit`, which takes away the convenient path. It does keep
-`Bash`, because a reviewer that cannot check whether a binary exists ends up
-inflating severities over guesses, and `Bash` can write files. So the last step
-of that prohibition is a rule in its prompt rather than a wall, and you should
-know that before pointing it at a repository you care about. It also never sees
-the conversation, which is the point: it is not attached to decisions that were
-already made.
+**The reviewer is not supposed to write, and mostly cannot.** `Write` and `Edit`
+are withheld. It keeps `Bash`, because a reviewer that cannot check whether a
+binary exists inflates severities over guesses, and `Bash` can write files. The
+last step of that prohibition is a rule in its prompt rather than a wall, and you
+should know that before pointing it at a repository you care about.
 
-**The Stop hook gives up after three failures.** A check the agent cannot fix
-would otherwise loop forever. The counter resets when it releases, because
-without that reset the gate stays open for the rest of the session.
+### What has actually been run
 
-### What is verified
-
-A repository about verification should say what was actually run. On macOS,
-end to end, against the real runtime:
+A repository about verification should say what was tested rather than ask to be
+believed. All of this was run on macOS, end to end, against the real runtime:
 
 - Both hooks registered, and which settings file they came from.
 - `PostToolUse` returning a lint error into the agent's context.
-- `Stop` blocking a turn while `make verify` was failing.
-- The three-strike release, and the counter resetting afterwards.
+- `Stop` blocking a turn, the three-strike release, and the counter resetting.
 - `.claude/.skip-verify` closing a turn with the gate still red.
-- `make demo` rejecting every fixture.
-- Both languages, across `verify`, `demo`, `doctor` and both hooks, including
-  the message the Stop hook emits when it releases.
-- Against real content: `kubeconform` accepting a valid manifest and rejecting
-  an invalid one under `-strict`, its schema cache filling up, `helm template`
-  on a stock chart, `terraform init -backend=false` and `validate`, `tflint`,
-  `trivy config`, and `mypy --strict`.
-- Pathological names: a space, a quote or a newline in a file *or directory*
-  name survives detection, validation and reporting without being split. What a
-  third-party tool then does with such a name is its own business; `tflint`, for
-  one, does not cope.
-- `bootstrap` on all three of its branches, and the exit code each returns: a
-  complete toolchain, an incomplete one, and no package manager at all.
-- `make verify-full` skipping e2e when no cluster answers, plus `help`, `clean`,
-  and the unknown-stage error path in both languages.
-- `.harness.conf` reaching the hooks and not only `make`, and both hooks falling
-  back to English when the catalogue is missing rather than failing.
-- `kyverno test` passing on a policy whose test matches, and failing when it
-  does not.
-- `terraform-docs` on a module that opted into generated docs, both current and
-  stale; on a directory that did not opt in, which is left alone; and on a config
-  that sets no output file, which is skipped rather than passed.
-- The coverage floor rejecting 75% source coverage, accepting full coverage, and
-  standing aside for a project that has no `src/` to scope it to.
+- Real content: `kubeconform` accepting a good manifest and rejecting a bad one,
+  `helm template` on a chart, `kyverno test` both ways, `terraform validate`,
+  `tflint`, `trivy`, `terraform-docs` on a current and on a stale module, and the
+  coverage floor rejecting 75% while accepting 100%.
+- `make verify-full` against kind on colima. A ConfigMap named `Nombre_Invalido`
+  is `Valid: 1` to kubeconform, whose schema does not constrain name format, and
+  the API server rejects it for not being an RFC 1123 subdomain. That gap is why
+  the e2e stage exists separately.
+- Names holding a space, a quote or a newline, in files and directories alike.
+- `bootstrap` on all three of its branches, and the exit code each returns.
+- Both languages everywhere, the reviewer included: asked in Spanish with the
+  English default in place, it answered in English.
 
-Everything above except the coverage floor is reproducible: `make selftest` runs
-the gate over `examples/valid/` and `make demo` runs it over `examples/broken/`,
-so none of it has to be taken on the word of a commit message. The coverage floor
-is the exception, because the python stage looks for `src/`, `tests/` and
-`pyproject.toml` at the repository root and cannot see a fixture in a
-subdirectory.
+Everything except the coverage floor is reproducible with `make demo` and
+`make selftest`. The floor is the exception, because the Python stage looks for
+`src/`, `tests/` and `pyproject.toml` at the repository root and cannot see a
+fixture in a subdirectory.
 
-- The reviewer following the configured language in both directions: asked in
-  Spanish with the default in place it answered in English, and with
-  `.harness.conf` set to Spanish it announced `Language is es` and answered in
-  Spanish.
-- `make verify-full` against a real cluster, on kind under colima. A ConfigMap
-  named `Nombre_Invalido` is `Valid: 1` to kubeconform, whose schema does not
-  constrain the format of a name, and is rejected by the API server for not
-  being an RFC 1123 subdomain. That gap is the whole reason the e2e stage exists
-  separately.
-
-Not verified:
-
-- **The apt/dnf path in `bootstrap.sh`.** Written, never run. Homebrew is the
-  tested route, on macOS and Linuxbrew alike.
-- **The three minute budget** against a repository with real content. On this
-  one `verify` takes about two seconds and `selftest`, which does have content,
-  about six.
+Not run: the apt/dnf path in `bootstrap.sh`, which is written but never executed,
+and the three minute budget against a repository with real content. Here `verify`
+takes about two seconds and `selftest` about six.
 
 ### Limits
 
-`terraform init` and the first `kubeconform` run need network access, though
-never cloud credentials. The three minute budget assumes warm caches.
+`terraform init` and the first `kubeconform` run need the network, though never
+cloud credentials.
 
-And the reviewer is a language model, not a linter. Early on it was close to
-useless: ten findings across three runs, three of them real, and twice a
-suggested fix that would have been worse than the bug it found. Tightening its
-rules, so that it checks claims it can check and never prescribes a remedy it
-has not run, changed that: the next review returned four findings, three real
-and each reproduced independently before being acted on, plus one observation it
-correctly declined to dress up as a defect.
-
-That accuracy has a price. It now runs around fifteen shell commands verifying
-its own claims, and a review of a ninety-line diff takes about five and a half
-minutes. If that is too slow, `maxTurns` in the agent's frontmatter bounds it
-without touching its judgement. Read what it says either way, and reproduce a
-finding before acting on it.
+The reviewer is a language model, not a linter. Early on it was close to useless:
+ten findings across three runs, three of them real, and twice a suggested fix
+that would have been worse than the bug. Tightening its rules, so that it checks
+what it can check and never prescribes a remedy it has not run, changed that. It
+now costs about five and a half minutes on a ninety-line diff, most of that spent
+verifying its own claims. `maxTurns` bounds it if that is too slow. Reproduce a
+finding before acting on it, either way.
 
 ### License
 
@@ -263,263 +231,230 @@ MIT. See [LICENSE](LICENSE).
 
 ## Español
 
-Un agente que revisa su propio trabajo se aprueba solo. Este es un armado donde
-no puede: un comando decide si el trabajo está terminado, y hay hooks que lo
-corren tenga ganas o no.
+Tu agente decide cuándo terminó. Esto le saca esa decisión.
 
-Probado en macOS. Antes de confiar en nada de esto, leé
-[Qué está verificado](#qué-está-verificado).
-
-### El problema
-
-El linter terminás siendo vos. Leés el diff, ves la variable sin comillas,
-avisás, esperás. Y en el archivo siguiente vuelve a pasar.
-
-Un prompt mejor no lo soluciona, porque el agente sigue siendo el que decide si
-terminó. Lo que lo soluciona es un gate que no pueda abrir.
-
-### Cómo cierra el loop
+Un comando dice si el trabajo pasa. Dos hooks lo corren tenga ganas o no. Si no
+pasa, el turno no cierra.
 
 ```text
-  editás un archivo
-        |
-        v
-  hook PostToolUse  ->  lintea solo ese archivo
-                        exit 2 mete el error en el contexto del agente,
-                        así el paso siguiente lo arregla sin que se lo pidas
-
-  el turno intenta cerrar
-        |
-        v
-  hook Stop         ->  corre `make verify`
-                        exit 2 significa que el turno no puede cerrar,
-                        y la salida pasa a ser el motivo
+=== make verify FALLÓ (intento 1/3): el turno no puede cerrar ===
+== static (pre-commit) ==
+  pre-commit                   FAIL
+      yamllint.......................................................Failed
+      config.yaml
+        2:4  error  syntax error: mapping values are not allowed here
 ```
 
-Dos exit codes sostienen casi todo el diseño. Equivocarlos es la razón habitual
-por la que un armado como este no hace nada sin que te enteres:
+Eso es un agente frenado a mitad de la frase. No puede contestarte hasta que el
+repo vuelva a estar limpio.
 
-| Exit | Qué pasa en realidad |
-| --- | --- |
-| `0` | Éxito. Al agente no le llega nada. |
-| `1` | Error no bloqueante. Va solo al log de debug, así que el agente nunca lo ve. Un hook basado en exit 1 parece correcto y no hace nada. |
-| `2` | En `PostToolUse`, tu stderr se le muestra al agente como advertencia (la edición queda igual). En `Stop`, el turno se bloquea y tu stderr pasa a ser el motivo. |
+En la entrada, la misma idea en chico. Editás un archivo y el linter te vuelve
+solo, sin que preguntes:
 
-### Arranque rápido
+```text
+PostToolUse:Edit hook returned blocking error
+LINT FALLÓ: demo.sh
+  echo $undefined_target
+       ^-------------^ SC2154: undefined_target is referenced but not assigned.
+```
+
+Dejás de ser vos el linter.
+
+### Probalo en tres comandos
 
 ```bash
 make bootstrap
 ```
 
-Ahora reiniciá tu sesión de Claude Code. Ese paso no es opcional, y
-[la falla que parece un éxito](#la-falla-que-parece-un-éxito) explica por qué.
-Después comprobá que el gate funciona de verdad:
+Después reiniciá tu sesión de Claude Code. Ese paso no es opcional, y
+[la parte que todos hacen mal](#la-parte-que-todos-hacen-mal) explica por qué.
 
 ```bash
 make demo
 ```
 
-`make demo` corre los linters contra archivos de `examples/broken/` que son
-inválidos a propósito. Falla si alguno *no* es rechazado. Después, la otra mitad:
+Corre el gate sobre `examples/broken/`, que es inválido a propósito, y falla si
+algo *no* es rechazado.
 
 ```bash
 make selftest
 ```
 
-`make selftest` corre el gate mismo sobre `examples/valid/`, que tiene un módulo,
-un chart, una policy y un manifiesto de verdad, y tiene que pasar. Entre los dos
-ya viste al gate rechazar lo que debe y aceptar lo que debe, en tu propia
-máquina, sin creerle nada a nadie.
+Corre el gate sobre `examples/valid/`, que tiene un módulo, un chart, una policy
+y un manifiesto de verdad, y tiene que pasar.
 
-### Idioma
+Entre los dos ya lo viste rechazar lo que debe y aceptar lo que debe, en tu
+propia máquina, en unos diez segundos. Acá no hay nada que tengas que creer.
 
-Todo lo que imprime el arnés está en inglés por defecto, y los informes del
-reviewer también. Los dos pueden hablar castellano.
+### Qué te llevás
 
-Solo para vos, sin tocar el repositorio:
+| Comando | Qué hace |
+| --- | --- |
+| `make verify` | El gate. Todo lo demás está construido alrededor de este comando. |
+| `make lint` | Solo la mitad rápida. |
+| `make verify-full` | Agrega un dry run server-side contra un cluster real. |
+| `make demo` | Prueba que el gate sigue atrapando cosas. |
+| `make selftest` | Prueba que el gate sigue aceptando lo bueno. |
+| `make doctor` | Qué herramientas tenés y cuáles te faltan. |
+| `make bootstrap` | Las instala. |
+
+Se fija qué contiene realmente tu repo y corre solo lo que aplica: manifiestos de
+Kubernetes, charts de Helm, policies de Kyverno, Terraform, Python, shell,
+Dockerfiles, GitHub Actions, Markdown, YAML y un escaneo de secretos. Si el mes
+que viene agregás Terraform, no hay que tocar nada acá.
+
+### Cómo funciona
+
+```text
+  editás un archivo
+        |
+        v
+  hook PostToolUse  ->  lintea ese archivo, en menos de dos segundos
+                        exit 2 mete el error en el contexto del agente
+
+  el turno intenta cerrar
+        |
+        v
+  hook Stop         ->  corre `make verify`
+                        exit 2 significa que el turno no puede cerrar
+```
+
+Siete piezas, y ninguna es ingeniosa:
+
+| Ruta | Qué es |
+| --- | --- |
+| `Makefile` | Los comandos de arriba. |
+| `scripts/verify.sh` | El motor. Vive acá porque macOS trae GNU Make 3.81, que no tiene `.ONESHELL`. |
+| `scripts/messages.sh` | Todas las cadenas que imprime, en inglés y castellano. |
+| `.claude/hooks/` | Los dos hooks. |
+| `.claude/agents/reviewer.md` | Un reviewer que lee tu diff sin memoria de cómo se escribió. |
+| `.pre-commit-config.yaml` | La única definición de los checks estáticos rápidos. |
+| `CLAUDE.md` | Las reglas. Sobre todo: arreglá la causa, nunca deshabilites el check. |
+
+### La parte que todos hacen mal
+
+Dos formas en que esto parece andar mientras no hace absolutamente nada.
+
+**Exit 1 no es exit 2.** Un hook que sale con 1 reporta un error no bloqueante
+que va al log de debug, y el agente nunca lo ve. Solo el exit 2 le pone tu stderr
+adelante. Armá un hook sobre exit 1 y va a parecer correcto para siempre sin
+lograr nada.
+
+**Los hooks se leen al arrancar la sesión.** Escribí `.claude/settings.json` en
+el medio de una sesión y no se arma nada. Todos los archivos están bien, la
+configuración es válida, ningún hook corre. Una ruta mal escrita en ese archivo
+se comporta igual, en silencio, como error no bloqueante.
+
+Así que no le creas a la configuración. Rompé algo y confirmá que te frenaron:
+
+1. `/hooks` tiene que listar los dos, y decir de qué archivo salieron.
+2. Escribí un archivo con un error de lint real. Te tiene que volver.
+3. Rompé `make verify` e intentá cerrar el turno. Te tiene que bloquear.
+
+Si el paso 3 no te bloquea, no tenés gate, diga lo que diga la configuración.
+
+### Hacelo tuyo
+
+Todo lo que imprime, y los informes del reviewer, están en inglés por defecto.
+Para castellano, o bien solo para vos:
 
 ```bash
 HARNESS_LANG=es make verify
 ```
 
-Para todos los que lo clonen, commiteá un `.harness.conf` en la raíz:
+o para todos los que lo clonen, con un `.harness.conf` en la raíz:
 
 ```ini
 lang = es
 ```
 
-La variable de entorno le gana al archivo, así que un default compartido y una
-preferencia personal nunca tienen que pelearse. Cualquier valor que no sea `es`
-resuelve a inglés, o sea que un error de tipeo degrada en silencio en vez de
-imprimirte claves de mensajes. `make lang` te dice cuál está activo ahora.
-
-Agregar un tercer idioma es agregar un bloque `case` a `scripts/messages.sh`.
-Las claves que falten caen a inglés en vez de romperse, así que una traducción
-parcial ya sirve desde la primera cadena.
-
-### Las piezas
-
-| Ruta | Qué hace |
-| --- | --- |
-| `Makefile` | `verify` es el gate canónico. También están `lint`, `verify-full`, `demo`, `selftest`, `doctor`, `lang` y `bootstrap`. |
-| `examples/` | `broken/` tiene que ser rechazado por `make demo`; `valid/` tiene que ser aceptado por `make selftest`. |
-| `scripts/verify.sh` | El motor. La lógica vive acá porque macOS trae GNU Make 3.81, que no tiene `.ONESHELL`. |
-| `scripts/messages.sh` | Todas las cadenas que imprime el arnés, en inglés y castellano. |
-| `.claude/hooks/lint-changed.sh` | `PostToolUse` con matcher `Edit\|Write`. Lintea solo el archivo recién escrito, en menos de dos segundos. |
-| `.claude/hooks/verify-on-stop.sh` | `Stop`. Corre `make verify` y bloquea el turno mientras falle. |
-| `.claude/agents/reviewer.md` | Revisa trabajo terminado sin memoria de cómo se construyó. |
-| `.pre-commit-config.yaml` | La única definición de los checks estáticos rápidos. |
-| `CLAUDE.md` | Las reglas. Sobre todo: arreglá la causa, nunca deshabilites el check. |
-
-### La falla que parece un éxito
-
-Esta es la parte que conviene leer dos veces.
-
-**Los hooks se leen cuando arranca la sesión.** Si escribís
-`.claude/settings.json` en el medio de una sesión, no se arma nada. Todos los
-archivos están bien, la configuración es válida, y ningún hook corre. Una ruta
-mal escrita en ese archivo se comporta igual, porque un hook que no se encuentra
-se trata como error no bloqueante.
-
-En los dos casos te quedás creyendo que tenés un gate cuando no tenés nada. Por
-eso la única prueba honesta es romper algo a propósito y confirmar que te
-frenaron:
-
-1. Corré `/hooks` y confirmá que aparecen los dos, y de qué archivo salieron.
-2. Escribí un archivo con un error de lint real. El error te tiene que volver.
-3. Rompé `make verify` e intentá cerrar el turno. Te tiene que bloquear.
-
-Si el paso 3 no te bloquea, no tenés gate, diga lo que diga la configuración.
+La variable le gana al archivo, así que un default de equipo y una preferencia
+personal nunca tienen que pelearse. `make lang` te dice cuál está activo. Un
+tercer idioma es un bloque `case` en `scripts/messages.sh`, y las claves que
+falten caen a inglés, así que una traducción a medias ya sirve.
 
 ### Decisiones de diseño
 
-**Detecta, no supone.** `verify` mira qué contiene realmente el repositorio y
-corre solo lo que aplica. Si mañana agregás Terraform, no hay que tocar nada
-acá.
-
 **El contenido que falta se saltea. Una herramienta que falta, no.** Que no haya
 archivos `.tf` significa saltear los checks de Terraform, y eso es honesto. Pero
-que haya archivos `.tf` sin `tflint` instalado es un fallo duro, porque si no el
-gate se pone verde por el peor motivo posible: no hay nada instalado que pueda
-atrapar nada.
+que haya `.tf` sin `tflint` instalado es fallo duro, porque si no el gate se pone
+verde por el peor motivo posible: no hay nada instalado que pueda atrapar nada.
 
 **Que diga `kubeconform ok` no significa que se hayan chequeado todos los
 manifiestos.** `-ignore-missing-schemas` es lo que deja pasar un CRD, y también
 es la forma en que una corrida reporta éxito habiendo validado una fracción de lo
-que leyó: una Kustomization y dos recursos de kyverno se saltean en silencio. Por
-eso la etapa imprime cuántos salteó, para que nadie lea una línea verde como más
-cobertura de la que es.
+que leyó. La etapa imprime cuántos salteó, para que una línea verde no se
+confunda con más cobertura de la que es.
 
-**El piso de cobertura es 85%, y solo para layouts con `src/`.** La cobertura se
-mide contra `src/` y no contra todo, porque un `--cov` pelado cuenta también los
-archivos de test, que están casi completamente cubiertos por definición y
-empujan el total por encima de la línea: 75% del fuente más 100% de los tests
-reporta 89%. Cuando un proyecto no tiene `src/` al que acotarlo, el piso se
-abandona diciéndolo en voz alta, porque un umbral que da verde por el motivo
-equivocado es peor que admitir que no hay umbral.
+**El piso de cobertura es 85%, y solo para layouts con `src/`.** Un `--cov`
+pelado cuenta los archivos de test, que están casi completamente cubiertos por
+definición y empujan el total por encima de la línea: 75% del fuente más 100% de
+tests reporta 89%. Sin un `src/` al que acotarlo, el piso se abandona en voz
+alta, porque un umbral que da verde por el motivo equivocado es peor que no tener
+umbral.
 
-**`pre-commit` es el único lugar donde se definen los checks estáticos**, y
-`make verify` lo corre primero. Sus linters son `repo: local`, así que llaman a
-los mismos binarios que instala `make bootstrap` y no pueden quedar en versiones
-distintas.
+**Los archivos sin trackear advierten, no fallan.** `pre-commit` solo ve archivos
+trackeados, así que uno sin trackear se saltea el paso estático. Fallar por eso
+te bloquearía todo el día, y un gate que la gente apaga no sirve para nada. La
+advertencia mantiene la grieta a la vista en vez de silenciosa.
 
-**Los archivos sin trackear advierten, no fallan.** `pre-commit` solo ve
-archivos trackeados, así que uno sin trackear se saltea todo el paso estático.
-Fallar por eso te bloquearía todo el tiempo mientras trabajás, y un gate que la
-gente apaga no sirve para nada. La advertencia mantiene la grieta a la vista en
-vez de silenciosa.
+**El hook de Stop se rinde a los tres intentos.** Un check que el agente no puede
+arreglar generaría un loop infinito. El contador se resetea al liberar, porque
+sin eso el gate queda abierto el resto de la sesión.
 
-**El reviewer no debería escribir, y en general no puede.** Su allowlist le
-niega `Write` y `Edit`, que le saca el camino cómodo. Sí conserva `Bash`, porque
-un revisor que no puede comprobar si un binario existe termina inflando
-severidades sobre suposiciones, y con `Bash` se pueden escribir archivos. Así
-que el último tramo de esa prohibición es una regla de su prompt y no un muro,
-y conviene saberlo antes de apuntarlo a un repo que te importa. Tampoco ve la
-conversación, y eso es a propósito, porque así no queda apegado a decisiones que
-ya se tomaron.
+**El reviewer no debería escribir, y en general no puede.** Tiene `Write` y
+`Edit` negados. Conserva `Bash`, porque un revisor que no puede comprobar si un
+binario existe infla severidades sobre suposiciones, y con `Bash` se pueden
+escribir archivos. El último tramo de esa prohibición es una regla de su prompt y
+no un muro, y conviene saberlo antes de apuntarlo a un repo que te importa.
 
-**El hook de Stop se rinde después de tres fallos.** Un check que el agente no
-puede arreglar generaría un loop infinito. El contador se resetea cuando libera,
-porque sin ese reset el gate queda abierto el resto de la sesión.
+### Qué se corrió de verdad
 
-### Qué está verificado
-
-Un repositorio que habla de verificación debería decir qué corrió de verdad. En
-macOS, punta a punta, contra el runtime real:
+Un repositorio que habla de verificación debería decir qué probó en vez de pedir
+que le crean. Todo esto se corrió en macOS, punta a punta, contra el runtime
+real:
 
 - Los dos hooks registrados, y de qué archivo de settings salieron.
 - `PostToolUse` devolviendo un error de lint al contexto del agente.
-- `Stop` bloqueando un turno mientras `make verify` fallaba.
-- La liberación al tercer intento, y el contador reseteándose después.
+- `Stop` bloqueando un turno, la liberación al tercer intento, y el contador
+  reseteándose.
 - `.claude/.skip-verify` cerrando un turno con el gate todavía en rojo.
-- `make demo` rechazando todos los fixtures.
-- Los dos idiomas, en `verify`, `demo`, `doctor` y los dos hooks, incluido el
-  mensaje que emite el hook de Stop cuando libera.
-- Contra contenido real: `kubeconform` aceptando un manifiesto válido y
-  rechazando uno inválido con `-strict`, su cache de schemas poblándose,
-  `helm template` sobre un chart recién creado, `terraform init -backend=false`
-  y `validate`, `tflint`, `trivy config`, y `mypy --strict`.
-- Nombres patológicos: un espacio, una comilla o un salto de línea en el nombre
-  de un archivo *o de un directorio* sobrevive a la detección, la validación y el
-  reporte sin partirse. Lo que después haga una herramienta de terceros con ese
-  nombre es asunto suyo; `tflint`, por ejemplo, no lo maneja.
-- `bootstrap` en sus tres ramas, con el código de salida de cada una: toolchain
-  completo, incompleto, y sin ningún gestor de paquetes.
-- `make verify-full` salteando e2e cuando no responde ningún cluster, más
-  `help`, `clean`, y el camino de error de etapa desconocida en los dos idiomas.
-- `.harness.conf` llegando a los hooks y no solo a `make`, y los dos hooks
-  cayendo a inglés cuando falta el catálogo en vez de romperse.
-- `kyverno test` pasando con una policy cuyo test coincide, y fallando cuando no.
-- `terraform-docs` sobre un módulo que optó por docs generadas, al día y
-  desactualizado; sobre un directorio que no optó, al que deja en paz; y sobre un
-  config que no define archivo de salida, que se saltea en vez de pasar.
-- El piso de cobertura rechazando un 75% de cobertura del fuente, aceptando la
-  cobertura completa, y haciéndose a un lado en un proyecto sin `src/` al que
-  acotarlo.
+- Contenido real: `kubeconform` aceptando un manifiesto bueno y rechazando uno
+  malo, `helm template` sobre un chart, `kyverno test` en los dos sentidos,
+  `terraform validate`, `tflint`, `trivy`, `terraform-docs` sobre un módulo al
+  día y sobre uno desactualizado, y el piso de cobertura rechazando 75% y
+  aceptando 100%.
+- `make verify-full` contra kind sobre colima. Un ConfigMap llamado
+  `Nombre_Invalido` es `Valid: 1` para kubeconform, cuyo schema no restringe el
+  formato del nombre, y el API server lo rechaza por no ser un subdominio RFC
+  1123. Esa brecha es por lo que la etapa e2e existe aparte.
+- Nombres con espacio, comilla o salto de línea, tanto en archivos como en
+  directorios.
+- `bootstrap` en sus tres ramas, con el código de salida de cada una.
+- Los dos idiomas en todos lados, incluido el reviewer: preguntado en castellano
+  y con el default en inglés puesto, contestó en inglés.
 
-Todo lo anterior salvo el piso de cobertura es reproducible: `make selftest`
-corre el gate sobre `examples/valid/` y `make demo` lo corre sobre
-`examples/broken/`, así que nada de esto hay que creérselo por el mensaje de un
-commit. El piso de cobertura es la excepción, porque la etapa de python busca
-`src/`, `tests/` y `pyproject.toml` en la raíz del repo y no puede ver un fixture
-en un subdirectorio.
+Todo salvo el piso de cobertura es reproducible con `make demo` y
+`make selftest`. El piso es la excepción, porque la etapa de Python busca `src/`,
+`tests/` y `pyproject.toml` en la raíz del repo y no puede ver un fixture en un
+subdirectorio.
 
-- El reviewer siguiendo el idioma configurado en los dos sentidos: preguntado en
-  castellano y con el default puesto contestó en inglés, y con `.harness.conf` en
-  castellano anunció `Language is es` y contestó en castellano.
-- `make verify-full` contra un cluster de verdad, kind sobre colima. Un ConfigMap
-  llamado `Nombre_Invalido` es `Valid: 1` para kubeconform, cuyo schema no
-  restringe el formato del nombre, y el API server lo rechaza por no ser un
-  subdominio RFC 1123. Esa brecha es exactamente por lo que la etapa e2e existe
-  aparte.
-
-Sin verificar:
-
-- **El camino apt/dnf de `bootstrap.sh`.** Escrito, nunca ejecutado. Homebrew es
-  la ruta probada, tanto en macOS como en Linuxbrew.
-- **El presupuesto de tres minutos** contra un repo con contenido real. En este
-  `verify` tarda unos dos segundos y `selftest`, que sí tiene contenido, unos
-  seis.
+Sin correr: el camino apt/dnf de `bootstrap.sh`, que está escrito pero nunca se
+ejecutó, y el presupuesto de tres minutos contra un repo con contenido real. Acá
+`verify` tarda unos dos segundos y `selftest` unos seis.
 
 ### Límites
 
 `terraform init` y la primera corrida de `kubeconform` necesitan red, aunque
-nunca credenciales de nube. El presupuesto de tres minutos asume caches
-calientes.
+nunca credenciales de nube.
 
-Y el reviewer es un modelo de lenguaje, no un linter. Al principio era casi
-inútil: diez hallazgos en tres corridas, tres reales, y dos veces un arreglo
-propuesto que habría sido peor que el problema encontrado. Endurecerle las
-reglas, para que compruebe lo que puede comprobar y nunca recete un remedio que
-no probó, cambió eso: la revisión siguiente trajo cuatro hallazgos, tres reales
-y cada uno reproducido de forma independiente antes de tocar nada, más una
-observación que correctamente se negó a disfrazar de defecto.
-
-Esa precisión tiene un precio. Ahora corre unos quince comandos de shell
-verificando sus propias afirmaciones, y una revisión de un diff de noventa
-líneas tarda unos cinco minutos y medio. Si te resulta lento, `maxTurns` en el
-frontmatter del agente lo acota sin tocarle el criterio. Leé lo que dice igual, y
-reproducí un hallazgo antes de actuar sobre él.
+El reviewer es un modelo de lenguaje, no un linter. Al principio era casi inútil:
+diez hallazgos en tres corridas, tres reales, y dos veces un arreglo propuesto
+que habría sido peor que el problema. Endurecerle las reglas, para que compruebe
+lo que puede comprobar y nunca recete un remedio que no probó, cambió eso. Ahora
+cuesta unos cinco minutos y medio sobre un diff de noventa líneas, la mayor parte
+verificando sus propias afirmaciones. `maxTurns` lo acota si te resulta lento.
+Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
 
 ### Licencia
 
