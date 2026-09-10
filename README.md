@@ -193,10 +193,10 @@ Not verified:
   answers has been seen.
 - **The apt/dnf path in `bootstrap.sh`.** Written, never run. Homebrew is the
   tested route, on macOS and Linuxbrew alike.
-- **The reviewer obeying `make lang`**, and the claim that its allowlist stops
-  it from writing files. Neither has been put to the test. It has reported in
-  Spanish, but only before the setting existed, when it was simply following the
-  conversation.
+- **The reviewer reporting in Spanish on request.** The English default has been
+  confirmed the interesting way round, by asking in Spanish and getting the
+  report in English, so it follows the configuration and not the conversation.
+  Pointing `.harness.conf` at Spanish and watching it switch has not been done.
 - **The three minute budget** against a repository with real content. On this
   one, which is nearly empty, `verify` takes about two seconds.
 
@@ -205,11 +205,19 @@ Not verified:
 `terraform init` and the first `kubeconform` run need network access, though
 never cloud credentials. The three minute budget assumes warm caches.
 
-And the reviewer is a language model, not a linter. Across three runs it
-produced ten findings, of which three were real. Twice, the fix it suggested
-would have been worse than the bug it found: one would have disabled the Stop
-hook's anti-loop guard, the other would have reintroduced the exact
-vulnerability it was meant to close. Read what it says. Do not apply it blindly.
+And the reviewer is a language model, not a linter. Early on it was close to
+useless: ten findings across three runs, three of them real, and twice a
+suggested fix that would have been worse than the bug it found. Tightening its
+rules, so that it checks claims it can check and never prescribes a remedy it
+has not run, changed that: the next review returned four findings, three real
+and each reproduced independently before being acted on, plus one observation it
+correctly declined to dress up as a defect.
+
+That accuracy has a price. It now runs around fifteen shell commands verifying
+its own claims, and a review of a ninety-line diff takes about five and a half
+minutes. If that is too slow, `maxTurns` in the agent's frontmatter bounds it
+without touching its judgement. Read what it says either way, and reproduce a
+finding before acting on it.
 
 ### License
 
@@ -410,10 +418,10 @@ Sin verificar:
   el que no responde ninguno.
 - **El camino apt/dnf de `bootstrap.sh`.** Escrito, nunca ejecutado. Homebrew es
   la ruta probada, tanto en macOS como en Linuxbrew.
-- **El reviewer obedeciendo a `make lang`**, y la afirmación de que su allowlist
-  le impide escribir archivos. Ninguna de las dos se puso a prueba. Reportó en
-  castellano, pero solo antes de que la opción existiera, cuando simplemente
-  seguía el idioma de la conversación.
+- **El reviewer reportando en castellano cuando se lo pide.** El default en
+  inglés sí quedó confirmado por el lado interesante: se le preguntó en
+  castellano y contestó en inglés, o sea que sigue la configuración y no la
+  conversación. Falta apuntar `.harness.conf` al castellano y verlo cambiar.
 - **El presupuesto de tres minutos** contra un repo con contenido real. En este,
   que está casi vacío, `verify` tarda unos dos segundos.
 
@@ -423,11 +431,19 @@ Sin verificar:
 nunca credenciales de nube. El presupuesto de tres minutos asume caches
 calientes.
 
-Y el reviewer es un modelo de lenguaje, no un linter. En tres corridas produjo
-diez hallazgos, de los cuales tres eran reales. Dos veces, el arreglo que
-propuso habría sido peor que el problema que encontró: uno desactivaba el
-guardarraíl anti-loop del hook de Stop, y el otro reintroducía exactamente la
-vulnerabilidad que venía a cerrar. Leé lo que dice. No lo apliques a ciegas.
+Y el reviewer es un modelo de lenguaje, no un linter. Al principio era casi
+inútil: diez hallazgos en tres corridas, tres reales, y dos veces un arreglo
+propuesto que habría sido peor que el problema encontrado. Endurecerle las
+reglas, para que compruebe lo que puede comprobar y nunca recete un remedio que
+no probó, cambió eso: la revisión siguiente trajo cuatro hallazgos, tres reales
+y cada uno reproducido de forma independiente antes de tocar nada, más una
+observación que correctamente se negó a disfrazar de defecto.
+
+Esa precisión tiene un precio. Ahora corre unos quince comandos de shell
+verificando sus propias afirmaciones, y una revisión de un diff de noventa
+líneas tarda unos cinco minutos y medio. Si te resulta lento, `maxTurns` en el
+frontmatter del agente lo acota sin tocarle el criterio. Leé lo que dice igual, y
+reproducí un hallazgo antes de actuar sobre él.
 
 ### Licencia
 
