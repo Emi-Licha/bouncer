@@ -4,11 +4,50 @@
 
 ## English
 
-Your coding agent decides when it is finished. Bouncer takes that decision away
-from it.
+Your agent tells you it is done. It usually is not.
+
+So you read the diff, you find the unquoted variable, you prompt again, it tells
+you it is done again, and there goes your afternoon. The problem is not that the
+model is careless. It is that the model is the one grading its own work.
+
+**Bouncer closes the loop.** The agent acts, a check runs on its own, the failure
+goes straight back into the agent's context, and it corrects without being asked.
+It cannot end the turn until the check passes.
+
+What you get out of that is accuracy that does not depend on you noticing.
+
+```text
+  you: "add the retry logic"
+        │
+        ▼
+┌───────────────── everything below happens without you ─────────────────┐
+│   agent edits a file                                                   │
+│         │                                                              │
+│         ▼                                                              │
+│   PostToolUse hook  ──▶  lints that one file, under 2s                 │
+│         │                exit 2 drops the complaint straight           │
+│         │                into the agent's context                      │
+│         ▼                                                              │
+│   agent fixes it, unprompted, then tries to end the turn               │
+│         │                                                              │
+│         ▼                                                              │
+│   Stop hook         ──▶  runs `make verify`, the whole gate            │
+│         │                exit 2 blocks the turn and hands              │
+│         │                back the failure as the reason                │
+│         │                                     │                        │
+│         │   ◀─────────────────────────────────┘  round again           │
+│         │        (three rounds, then it gives up and says so)          │
+└────────────────────────────────────────────────────────────────────────┘
+        │
+        │  make verify passed
+        ▼
+  an answer you did not have to check
+```
 
 A bouncer does not argue about whether you are on the list. Being extremely
 confident that you are on the list does not get you in. That is the whole idea.
+
+Here is the Stop hook refusing to let a turn end:
 
 ```text
 === make verify FAILED (attempt 1/3): the turn cannot end ===
@@ -19,11 +58,7 @@ confident that you are on the list does not get you in. That is the whole idea.
         2:4  error  syntax error: mapping values are not allowed here
 ```
 
-That is an agent stopped mid-sentence. It cannot answer you until the repository
-is clean again.
-
-The same idea applies on the way in. Edit a file and the complaint comes back on
-its own, without you asking for it:
+And the PostToolUse hook handing back a complaint nobody asked for:
 
 ```text
 PostToolUse:Edit hook returned blocking error
@@ -32,19 +67,16 @@ LINT FAILED: demo.sh
        ^-------------^ SC2154: undefined_target is referenced but not assigned.
 ```
 
-You stop being the one who reads every diff looking for unquoted variables.
+### What Bouncer is
 
-### What Bouncer is, and is not
+**It is a loop.** Act, check, feed the failure back, correct, repeat until it
+passes. Control theory calls that a closed loop, and closing it is the entire
+product. The distinctive part is not what gets checked. It is who decides. You
+take that away from the agent and hand it to a command that does not negotiate.
 
-It is not a library you import, not a service you run, not a pipeline and not a
-graph. There is no orchestration anywhere in it: two events and one command.
-
-It is a handful of files that live in your repository and change what your agent
-is **allowed** to do. The shape has a name in control theory, a closed loop: the
-agent acts, a check runs by itself, the result goes back into the agent's
-context, the agent corrects, and round it goes until the check passes. The
-distinctive part is not what gets checked. It is who decides. You take that from
-the agent and hand it to a command that does not negotiate.
+It is not a library you import, a service you run, a pipeline or a graph. There
+is no orchestration anywhere in it: two events and one command, sitting in your
+repository, changing what your agent is allowed to do.
 
 ### The cast
 
@@ -134,20 +166,6 @@ on faith.
 Bouncer works out what your repository actually contains and runs only what
 applies. Add Terraform next month and nothing here needs editing.
 
-```text
-  you edit a file
-        |
-        v
-  PostToolUse hook  ->  lints that one file, in under two seconds
-                        exit 2 puts the error in the agent's context
-
-  the turn tries to end
-        |
-        v
-  Stop hook         ->  runs `make verify`
-                        exit 2 means the turn cannot end
-```
-
 Seven files, and none of them is clever:
 
 | Path | What it is |
@@ -180,14 +198,16 @@ If step 3 does not block you, you do not have a gate, whatever the config says.
 
 ### Make it yours
 
-Everything Bouncer prints, and the reviewer's reports, are in English by default.
-For Spanish, either just for you:
+Bouncer speaks English by default, and so do the reviewer's reports. If you want
+Spanish, there are two ways.
+
+Just for you, leaving the repository untouched:
 
 ```bash
 BOUNCER_LANG=es make verify
 ```
 
-or for everyone who clones it, with a `.bouncer.conf` in the root:
+For everyone who clones it, with a `.bouncer.conf` in the root:
 
 ```ini
 lang = es
@@ -282,10 +302,50 @@ MIT. See [LICENSE](LICENSE).
 
 ## Español
 
-Tu agente decide cuándo terminó. Bouncer le saca esa decisión.
+Tu agente te dice que ya terminó. Casi nunca es así.
+
+Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo, te
+vuelve a decir que terminó, y ahí se te fue la tarde. El problema no es que el
+modelo sea descuidado. Es que el modelo es el que se corrige a sí mismo.
+
+**Bouncer cierra el loop.** El agente actúa, un chequeo corre solo, la falla
+vuelve derecho a su contexto, y corrige sin que se lo pidas. No puede cerrar el
+turno hasta que el chequeo pase.
+
+Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
+
+```text
+  vos: "agregá la lógica de reintento"
+        │
+        ▼
+┌──────────────────── todo lo de abajo pasa sin vos ─────────────────────┐
+│   el agente edita un archivo                                           │
+│         │                                                              │
+│         ▼                                                              │
+│   hook PostToolUse  ──▶  lintea ese archivo, en menos de 2s            │
+│         │                 exit 2 le mete la queja derecho              │
+│         │                 en el contexto al agente                     │
+│         ▼                                                              │
+│   lo arregla solo, y recién ahí intenta cerrar el turno                │
+│         │                                                              │
+│         ▼                                                              │
+│   hook Stop         ──▶  corre `make verify`, el gate entero           │
+│         │                 exit 2 bloquea el turno y le                 │
+│         │                 devuelve la falla como motivo                │
+│         │                                      │                       │
+│         │   ◀──────────────────────────────────┘  otra vuelta          │
+│         │       (tres vueltas, después se rinde y lo dice)             │
+└────────────────────────────────────────────────────────────────────────┘
+        │
+        │  make verify pasó
+        ▼
+  una respuesta que no tuviste que revisar
+```
 
 Un patovica no discute si estás en la lista. Estar muy convencido de que estás en
 la lista no te hace entrar. Esa es toda la idea.
+
+Así se ve el hook de Stop negándose a dejar cerrar un turno:
 
 ```text
 === make verify FALLÓ (intento 1/3): el turno no puede cerrar ===
@@ -296,11 +356,7 @@ la lista no te hace entrar. Esa es toda la idea.
         2:4  error  syntax error: mapping values are not allowed here
 ```
 
-Eso es un agente frenado a mitad de la frase. No puede contestarte hasta que el
-repo vuelva a estar limpio.
-
-En la entrada pasa lo mismo. Editás un archivo y la queja te vuelve sola, sin que
-la pidas:
+Y el hook de PostToolUse devolviendo una queja que nadie pidió:
 
 ```text
 PostToolUse:Edit hook returned blocking error
@@ -309,20 +365,16 @@ LINT FALLÓ: demo.sh
        ^-------------^ SC2154: undefined_target is referenced but not assigned.
 ```
 
-Dejás de ser el que lee cada diff buscando variables sin comillas.
+### Qué es Bouncer
 
-### Qué es Bouncer, y qué no
+**Es un loop.** Actuar, chequear, devolver la falla, corregir, repetir hasta que
+pase. La teoría de control lo llama loop cerrado, y cerrarlo es todo el producto.
+Lo distintivo no es qué se chequea. Es quién decide. Se lo sacás al agente y se
+lo das a un comando que no negocia.
 
-No es una librería que importás, no es un servicio que corrés, no es un pipeline
-y no es un graph. No hay orquestación en ningún lado: son dos eventos y un
-comando.
-
-Son un puñado de archivos que viven en tu repo y cambian lo que tu agente **tiene
-permitido** hacer. La forma tiene nombre en teoría de control, un loop cerrado:
-el agente actúa, un chequeo corre solo, el resultado vuelve a entrar en su
-contexto, el agente corrige, y así hasta que el chequeo pasa. Lo distintivo no es
-qué se chequea. Es quién decide. Se lo sacás al agente y se lo das a un comando
-que no negocia.
+No es una librería que importás, ni un servicio que corrés, ni un pipeline, ni un
+graph. No hay orquestación en ningún lado: dos eventos y un comando, viviendo en
+tu repo, cambiando lo que tu agente tiene permitido hacer.
 
 ### El elenco
 
@@ -414,20 +466,6 @@ propia máquina, en unos diez segundos. Acá no hay nada que tengas que creer.
 Bouncer se fija qué contiene realmente tu repo y corre solo lo que aplica. Si el
 mes que viene agregás Terraform, no hay que tocar nada acá.
 
-```text
-  editás un archivo
-        |
-        v
-  hook PostToolUse  ->  lintea ese archivo, en menos de dos segundos
-                        exit 2 mete el error en el contexto del agente
-
-  el turno intenta cerrar
-        |
-        v
-  hook Stop         ->  corre `make verify`
-                        exit 2 significa que el turno no puede cerrar
-```
-
 Siete archivos, y ninguno es ingenioso:
 
 | Ruta | Qué es |
@@ -460,14 +498,16 @@ Si el paso 3 no te bloquea, no tenés gate, diga lo que diga la configuración.
 
 ### Hacelo tuyo
 
-Todo lo que Bouncer imprime, y los informes del reviewer, están en inglés por
-defecto. Para castellano, o bien solo para vos:
+Bouncer habla inglés por defecto, y los informes del reviewer también. Si lo
+querés en castellano, hay dos formas.
+
+Solo para vos, sin tocar el repo:
 
 ```bash
 BOUNCER_LANG=es make verify
 ```
 
-o para todos los que lo clonen, con un `.bouncer.conf` en la raíz:
+Para todos los que lo clonen, con un `.bouncer.conf` en la raíz:
 
 ```ini
 lang = es
