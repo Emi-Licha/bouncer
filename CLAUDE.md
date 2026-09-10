@@ -23,6 +23,17 @@ so and we change it together.
 6. Review with the `reviewer` subagent.
 7. Stop.
 
+### Reviews
+
+Relay a review from the `reviewer` subagent by quoting it in full, in the
+language it was written in. Your own reading of it goes afterwards, clearly
+separated from the report. A paraphrase drops the severities and the `path:line`
+locations, and the report is an artefact someone may want to paste into a pull
+request.
+
+Reproduce a finding before acting on it. The reviewer has twice proposed a
+remedy worse than the defect it had found.
+
 ### Tests
 
 TDD where it applies: write the test first, confirm it fails for the right
@@ -68,6 +79,16 @@ decilo y lo cambiamos juntos.
 5. Commit.
 6. Review con el subagente `reviewer`.
 7. Parar.
+
+### Revisiones
+
+Los informes del subagente `reviewer` se relevan citándolos completos y en el
+idioma en que fueron escritos. Tu lectura del informe va después, separada de
+él. Un resumen pierde las severidades y las ubicaciones `archivo:línea`, y el
+informe es un artefacto que alguien puede querer pegar en un pull request.
+
+Reproducí un hallazgo antes de actuar sobre él. El reviewer ya propuso dos veces
+un remedio peor que el defecto que había encontrado.
 
 ### Tests
 

@@ -133,6 +133,13 @@ Terraform checks are skipped, and that is honest. But `.tf` files with no
 `tflint` installed is a hard failure, because otherwise the gate goes green for
 the worst possible reason: nothing is installed to catch anything.
 
+**The coverage floor is 85%, and only for `src/` layouts.** Coverage is measured
+against `src/` rather than everything, because a bare `--cov` counts the test
+files, which are close to fully covered by definition and lift the total over the
+line: 75% source plus 100% tests reports 89%. Where a project has no `src/` to
+scope to, the floor is dropped and said so out loud, on the grounds that a
+threshold going green for the wrong reason is worse than admitting there is none.
+
 **`pre-commit` is the only place static checks are defined**, and `make verify`
 runs it first. Its linters are `repo: local`, so they call the same binaries
 `make bootstrap` installs and cannot drift to a different version.
@@ -182,10 +189,13 @@ end to end, against the real runtime:
   and the unknown-stage error path in both languages.
 - `.harness.conf` reaching the hooks and not only `make`, and both hooks falling
   back to English when the catalogue is missing rather than failing.
-- `kyverno test` passing on a policy whose test matches and failing when it does
-  not, `terraform-docs` on a module whose README is current and on one that is
-  stale, and the coverage floor rejecting 75% source coverage while accepting
-  full coverage.
+- `kyverno test` passing on a policy whose test matches, and failing when it
+  does not.
+- `terraform-docs` on a module that opted into generated docs, both current and
+  stale; on a directory that did not opt in, which is left alone; and on a config
+  that sets no output file, which is skipped rather than passed.
+- The coverage floor rejecting 75% source coverage, accepting full coverage, and
+  standing aside for a project that has no `src/` to scope it to.
 
 Not verified:
 
@@ -356,6 +366,14 @@ que haya archivos `.tf` sin `tflint` instalado es un fallo duro, porque si no el
 gate se pone verde por el peor motivo posible: no hay nada instalado que pueda
 atrapar nada.
 
+**El piso de cobertura es 85%, y solo para layouts con `src/`.** La cobertura se
+mide contra `src/` y no contra todo, porque un `--cov` pelado cuenta también los
+archivos de test, que están casi completamente cubiertos por definición y
+empujan el total por encima de la línea: 75% del fuente más 100% de los tests
+reporta 89%. Cuando un proyecto no tiene `src/` al que acotarlo, el piso se
+abandona diciéndolo en voz alta, porque un umbral que da verde por el motivo
+equivocado es peor que admitir que no hay umbral.
+
 **`pre-commit` es el único lugar donde se definen los checks estáticos**, y
 `make verify` lo corre primero. Sus linters son `repo: local`, así que llaman a
 los mismos binarios que instala `make bootstrap` y no pueden quedar en versiones
@@ -407,10 +425,13 @@ macOS, punta a punta, contra el runtime real:
   `help`, `clean`, y el camino de error de etapa desconocida en los dos idiomas.
 - `.harness.conf` llegando a los hooks y no solo a `make`, y los dos hooks
   cayendo a inglés cuando falta el catálogo en vez de romperse.
-- `kyverno test` pasando con una policy cuyo test coincide y fallando cuando no,
-  `terraform-docs` sobre un módulo con el README al día y sobre uno
-  desactualizado, y el piso de cobertura rechazando un 75% de cobertura del
-  fuente y aceptando la cobertura completa.
+- `kyverno test` pasando con una policy cuyo test coincide, y fallando cuando no.
+- `terraform-docs` sobre un módulo que optó por docs generadas, al día y
+  desactualizado; sobre un directorio que no optó, al que deja en paz; y sobre un
+  config que no define archivo de salida, que se saltea en vez de pasar.
+- El piso de cobertura rechazando un 75% de cobertura del fuente, aceptando la
+  cobertura completa, y haciéndose a un lado en un proyecto sin `src/` al que
+  acotarlo.
 
 Sin verificar:
 
