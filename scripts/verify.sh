@@ -203,9 +203,12 @@ stage_k8s() {
   # -ignore-missing-schemas is what lets CRDs through, and it is also how a run
   # reports ok while validating a fraction of what it read: a Kustomization and
   # two kyverno CRDs are skipped in silence. The count is surfaced so nobody
-  # mistakes "kubeconform ok" for "every manifest was checked".
+  # mistakes "kubeconform ok" for "every manifest was checked". xargs splits a
+  # long file list across several kubeconform runs, each printing its own
+  # summary, so the counts are summed rather than read off the last one.
   local skipped
-  skipped=$(printf '%s' "$RUN_OUT" | sed -n 's/.*Skipped: \([0-9][0-9]*\).*/\1/p' | tail -1)
+  skipped=$(printf '%s' "$RUN_OUT" | sed -n 's/.*Skipped: \([0-9][0-9]*\).*/\1/p' |
+            awk '{ n += $1 } END { if (NR) print n }')
   if [ -n "$skipped" ] && [ "$skipped" -gt 0 ]; then
     printf '  %swarn%s  %s\n' "$Y" "$O" "$(msg kubeconform_skipped "$skipped")"
   fi
