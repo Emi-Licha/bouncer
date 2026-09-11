@@ -53,6 +53,7 @@ msg_en() {
     skip_terraform)     printf 'terraform (no .tf files)' ;;
     skip_tfdocs)        printf 'terraform-docs (no .terraform-docs.yml)' ;;
     skip_tfdocs_nooutput) printf 'terraform-docs (%%s sets no output file, so --output-check verifies nothing)' ;;
+    skip_tfdocs_unparsed) printf 'terraform-docs (could not read output.file from %%s: only block style is understood)' ;;
     skip_python)        printf 'python (no .py files)' ;;
     skip_mypy)          printf 'mypy (no src/)' ;;
     skip_pytest)        printf 'pytest (needs tests/ and pyproject.toml)' ;;
@@ -119,6 +120,7 @@ msg_es() {
     skip_terraform)     printf 'terraform (no hay archivos .tf)' ;;
     skip_tfdocs)        printf 'terraform-docs (no hay .terraform-docs.yml)' ;;
     skip_tfdocs_nooutput) printf 'terraform-docs (%%s no define archivo de salida, así que --output-check no verifica nada)' ;;
+    skip_tfdocs_unparsed) printf 'terraform-docs (no se pudo leer output.file de %%s: solo se entiende el estilo en bloque)' ;;
     skip_python)        printf 'python (no hay archivos .py)' ;;
     skip_mypy)          printf 'mypy (no hay src/)' ;;
     skip_pytest)        printf 'pytest (necesita tests/ y pyproject.toml)' ;;

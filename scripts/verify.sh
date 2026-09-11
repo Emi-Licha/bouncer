@@ -255,24 +255,47 @@ tf_validate() {
 
 # tfdocs_config <module dir>: the config terraform-docs will use for that
 # module, searched in its order: the module, the module's .config/, the current
-# directory, then its .config/. Prints nothing when there is none.
+# directory, its .config/, then ~/.tfdocs.d/. Prints nothing when there is none.
+# A leading ./ is dropped, so one file always comes out spelled one way, whether
+# it was reached from a module at the root or from one in a subdirectory.
 tfdocs_config() {
   local c
   for c in "$1/.terraform-docs.yml" "$1/.config/.terraform-docs.yml" \
-           .terraform-docs.yml .config/.terraform-docs.yml; do
+           .terraform-docs.yml .config/.terraform-docs.yml \
+           "${HOME:-/nonexistent}/.tfdocs.d/.terraform-docs.yml"; do
     if [ -f "$c" ]; then
-      printf '%s' "$c"
+      printf '%s' "${c#./}"
       return
     fi
   done
 }
 
 # tfdocs_output_file <config>: output.file, with quotes and a trailing comment
-# stripped. Only a file key under output: counts, since other sections of the
-# config can carry keys of the same name.
+# stripped. Only a key sitting directly under output: counts. A file: line in
+# another section, or inside the text of a template: block, is more deeply
+# indented or outside the block, and is ignored. Block style only: a one-line
+# `output: {...}` map yields nothing, and the caller reports it as unreadable.
 tfdocs_output_file() {
-  sed -n '/^output[[:space:]]*:/,/^[^[:space:]#]/ s/^[[:space:]][[:space:]]*file[[:space:]]*:[[:space:]]*//p' "$1" |
-    head -1 | sed 's/[[:space:]]#.*$//; s/[[:space:]]*$//' | tr -d "\"'"
+  awk -v q="'" '
+    /^output[[:space:]]*:[[:space:]]*(#.*)?$/ { inside = 1; indent = -1; next }
+    inside {
+      if ($0 ~ /^[[:space:]]*(#.*)?$/) next
+      match($0, /^[[:space:]]*/)
+      if (RLENGTH == 0) exit
+      if (indent < 0) indent = RLENGTH
+      if (RLENGTH < indent) exit
+      if (RLENGTH == indent && $0 ~ /^[[:space:]]*file[[:space:]]*:/) {
+        v = $0
+        sub(/^[[:space:]]*file[[:space:]]*:[[:space:]]*/, "", v)
+        sub(/[[:space:]]+#.*$/, "", v)
+        sub(/[[:space:]]+$/, "", v)
+        gsub(/"/, "", v)
+        gsub(q, "", v)
+        print v
+        exit
+      }
+    }
+  ' "$1"
 }
 
 stage_terraform() {
@@ -311,27 +334,37 @@ stage_terraform() {
   # --output-check writes the rendered docs to stdout and exits 0 however stale
   # they are. It would report ok while checking nothing, so it is skipped out
   # loud instead, once per config.
-  local cfg file any_cfg="" tfdocs_ready="" reported=$'\n'
+  local cfg file key any_cfg="" tfdocs_checked="" tfdocs_missing="" reported=$'\n'
   while IFS= read -r -d '' d; do
     cfg=$(tfdocs_config "$d")
     [ -n "$cfg" ] || continue
     any_cfg=1
     file=$(tfdocs_output_file "$cfg")
     if [ -z "$file" ]; then
+      # An output: with a value on its own line is a flow-style map the parser
+      # does not read. Saying it sets no output file would be a false reason.
+      if grep -qE '^output[[:space:]]*:[[:space:]]*[^[:space:]#]' "$cfg"; then
+        key=skip_tfdocs_unparsed
+      else
+        key=skip_tfdocs_nooutput
+      fi
       case "$reported" in
         *$'\n'"$cfg"$'\n'*) ;;
         *)
-          skip "$(msg skip_tfdocs_nooutput "$cfg")"
+          skip "$(msg "$key" "$cfg")"
           reported="${reported}${cfg}"$'\n'
           ;;
       esac
       continue
     fi
     grep -q 'BEGIN_TF_DOCS' "$d/$file" 2>/dev/null || continue
-    if [ -z "$tfdocs_ready" ]; then
-      need terraform-docs "$cfg" || break
-      tfdocs_ready=1
+    # The tool is looked up once. When it is missing the loop carries on, so the
+    # configs after it that set no output file are still reported.
+    if [ -z "$tfdocs_checked" ]; then
+      tfdocs_checked=1
+      need terraform-docs "$cfg" || tfdocs_missing=1
     fi
+    [ -z "$tfdocs_missing" ] || continue
     run "terraform-docs $d" terraform-docs markdown table --output-check "$d"
   done < "$TMP/tfdirs.z"
   [ -n "$any_cfg" ] || skip "$(msg skip_tfdocs)"

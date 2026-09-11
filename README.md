@@ -407,6 +407,10 @@ in the module first, then at the root. And then only on modules where that file
 carries the `BEGIN_TF_DOCS` marker, so a directory without it, such as a usage
 example, is left alone.
 
+Bouncer reads that output file with a small parser that understands the usual
+block style. A config that writes `output:` as a one-line `{file: ...}` map is
+reported as unreadable and skipped, rather than guessed at.
+
 ### Design notes
 
 **Missing content is skipped. A missing tool is not.** If there are no `.tf`
@@ -922,6 +926,10 @@ donde un `.terraform-docs.yml` define un archivo de salida, buscado igual que lo
 busca terraform-docs: primero en el módulo, después en la raíz. Y aun así solo
 sobre los módulos donde ese archivo tenga el marcador `BEGIN_TF_DOCS`, así que
 un directorio sin él, como un ejemplo de uso, queda afuera.
+
+Bouncer lee ese archivo de salida con un parser chico que entiende el estilo en
+bloque de siempre. Una config que escribe `output:` como un mapa en una línea,
+`{file: ...}`, se reporta como ilegible y se saltea, en vez de adivinarla.
 
 ### Decisiones de diseño
 
