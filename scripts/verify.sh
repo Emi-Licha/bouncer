@@ -133,6 +133,15 @@ stage_untracked() {
   printf '%s\n' "$u" | sed 's/^/        /'
 }
 
+# The hooks read what Claude Code sends them with jq, and exit 0 in silence
+# without it rather than wedge the session. That switches the Stop gate off
+# without a word, and the Stop hook cannot report the dependency it is missing,
+# so a repository that carries the hooks needs jq here instead.
+stage_hooks() {
+  [ -d .claude/hooks ] || return
+  need jq ".claude/hooks" || return
+}
+
 # in_chart <path>: true when the file lives inside a Helm chart.
 in_chart() {
   [ -s "$TMP/chartdirs.z" ] || return 1
@@ -344,7 +353,7 @@ stage_doctor() {
   printf '%-16s %s\n' "$(msg doctor_tool)" "$(msg doctor_status)"
   for t in pre-commit gitleaks yamllint kubeconform helm kyverno terraform \
            tflint terraform-docs trivy actionlint shellcheck hadolint \
-           markdownlint ruff mypy uv kubectl; do
+           markdownlint ruff mypy uv kubectl jq; do
     if command -v "$t" >/dev/null 2>&1; then
       printf '%-16s %s%s%s\n' "$t" "$G" "$(msg doctor_ok)" "$O"
     else
@@ -368,6 +377,7 @@ case "$STAGE" in
     stage_lint
     ;;
   core|full)
+    stage_hooks
     stage_lint
     stage_k8s
     stage_helm

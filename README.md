@@ -489,6 +489,11 @@ downloads its hook environments on first run, `kubeconform` fetches schemas it
 has not cached, `trivy` fetches its checks bundle, and `terraform init` fetches
 any providers a module declares.
 
+The hooks need `jq` to read what Claude Code sends them. Without it they step
+aside in silence rather than wedge the session. `make bootstrap` installs it,
+`make doctor` lists it, and `make verify` fails without it, but the Stop hook
+itself cannot warn you: it is the part that needs `jq`.
+
 The reviewer is a language model, not a linter. Its first two reviews produced
 seven findings, two of them real, and both times the fix it suggested would have
 been worse than the bug. Tightening its rules, so that it checks what it can
@@ -1000,6 +1005,11 @@ Partes del gate necesitan red, aunque nunca credenciales de nube: `pre-commit`
 baja sus entornos de hooks la primera vez, `kubeconform` baja los schemas que no
 tiene en caché, `trivy` baja su paquete de checks, y `terraform init` baja los
 providers que declare un módulo.
+
+Los hooks necesitan `jq` para leer lo que les manda Claude Code. Sin él se hacen
+a un lado en silencio, antes que trabar la sesión. `make bootstrap` lo instala,
+`make doctor` lo lista y `make verify` falla sin él, pero el hook de Stop no te
+puede avisar: es justamente la parte que necesita `jq`.
 
 El reviewer es un modelo de lenguaje, no un linter. Sus dos primeras revisiones
 trajeron siete hallazgos, dos reales, y las dos veces el arreglo que propuso

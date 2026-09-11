@@ -13,17 +13,18 @@ set -euo pipefail
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# Every tool the gate can call. `make doctor` reports on the same list.
+# Every tool the gate and its hooks can call. `make doctor` reports on the same
+# list. jq is the hooks' own dependency: without it they step aside in silence.
 TOOLS="pre-commit gitleaks yamllint kubeconform helm kyverno terraform tflint
        terraform-docs trivy actionlint shellcheck hadolint markdownlint ruff
-       mypy uv kubectl"
+       mypy uv kubectl jq"
 
 install_with_brew() {
   msg boot_brew; echo
   for pkg in \
     pre-commit gitleaks yamllint kubeconform helm kyverno terraform \
     terraform-docs trivy actionlint shellcheck hadolint markdownlint-cli \
-    uv ruff mypy kubernetes-cli; do
+    uv ruff mypy kubernetes-cli jq; do
     if brew list --versions "$pkg" >/dev/null 2>&1; then
       printf '  %-20s %s\n' "$pkg" "$(msg boot_already)"
     else
@@ -46,14 +47,14 @@ install_with_brew() {
 install_with_apt() {
   msg boot_apt; echo
   sudo apt-get update
-  sudo apt-get install -y yamllint shellcheck python3-pip
+  sudo apt-get install -y yamllint shellcheck jq python3-pip
   pip3 install --user pre-commit ruff mypy
 }
 
 # UNTESTED. Note that Fedora spells shellcheck with capitals.
 install_with_dnf() {
   msg boot_dnf; echo
-  sudo dnf install -y yamllint ShellCheck python3-pip
+  sudo dnf install -y yamllint ShellCheck jq python3-pip
   pip3 install --user pre-commit ruff mypy
 }
 
@@ -88,6 +89,7 @@ report_missing() {
       mypy)           printf '  %-16s github: python/mypy\n' "$t" ;;
       uv)             printf '  %-16s github: astral-sh/uv\n' "$t" ;;
       kubectl)        printf '  %-16s github: kubernetes/kubernetes\n' "$t" ;;
+      jq)             printf '  %-16s github: jqlang/jq\n' "$t" ;;
       *)              printf '  %-16s %s\n' "$t" "$(msg boot_from_project)" ;;
     esac
   done
