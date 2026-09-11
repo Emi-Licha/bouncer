@@ -227,6 +227,11 @@ Runs the whole gate over `examples/valid/`, which holds real content (a
 Terraform module, a Helm chart, a Kyverno policy and a Kubernetes manifest), and
 has to pass.
 
+That includes the end-to-end stage, a server-side dry run of the manifest against
+whatever cluster your current kube context points at. Nothing gets created, but
+check the context first if it points somewhere you care about. With no
+reachable cluster, the stage is skipped with a warning.
+
 Between the two you have watched it reject what it should and accept what it
 should, on your own machine, in a few seconds. Nothing here asks to be taken on
 faith. Watching the hooks stop an agent is the next step, and that needs a
@@ -500,8 +505,8 @@ been worse than the bug. Tightening its rules, so that it checks what it can
 check and never prescribes a remedy it has not run, changed that: its two most
 recent reviews produced seven findings, six of them real. The price is time,
 about five and a half minutes on a ninety-line diff, most of it spent verifying
-its own claims. `maxTurns` in its frontmatter caps how long it runs. Reproduce a
-finding before acting on it, either way.
+its own claims, and nothing in its frontmatter caps it. Reproduce a finding
+before acting on it, either way.
 
 Nothing enforces what `CLAUDE.md` asks for: the plan, the commit, the review and
 the no-push rule. They are instructions, not hooks, so they hold only as long as
@@ -735,6 +740,11 @@ make selftest
 Corre el gate entero sobre `examples/valid/`, que tiene contenido de verdad (un
 módulo de Terraform, un chart de Helm, una policy de Kyverno y un manifiesto de
 Kubernetes), y tiene que pasar.
+
+Eso incluye la etapa end-to-end, un dry run del lado del servidor del manifiesto
+contra el cluster al que apunte tu contexto de kube actual. No se crea nada,
+pero revisá el contexto antes si apunta a algún lugar que te importa. Sin un
+cluster accesible, la etapa se saltea con una advertencia.
 
 Entre los dos ya lo viste rechazar lo que debe y aceptar lo que debe, en tu
 propia máquina, en pocos segundos. Acá no hay nada que tengas que creer. Ver a
@@ -1017,8 +1027,8 @@ habría sido peor que el problema. Endurecerle las reglas, para que compruebe lo
 que puede comprobar y nunca recete un remedio que no probó, cambió eso: sus dos
 revisiones más recientes trajeron siete hallazgos, seis reales. El precio es
 tiempo, unos cinco minutos y medio sobre un diff de noventa líneas, la mayor
-parte verificando sus propias afirmaciones. `maxTurns` en su frontmatter limita
-cuánto corre. Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
+parte verificando sus propias afirmaciones, y nada en su frontmatter lo limita.
+Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
 
 Nada hace cumplir lo que pide `CLAUDE.md`: el plan, el commit, la review y la
 regla de no pushear. Son instrucciones, no hooks, así que se sostienen solo

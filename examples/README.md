@@ -20,9 +20,11 @@ make demo      # every fixture in broken/ must be rejected
 make selftest  # everything in valid/ must pass
 ```
 
-`valid/` is pruned from an ordinary `make verify`, so the repository's own gate
-stays fast and a fork does not inherit fixtures it never asked for.
-`make selftest` sets `BOUNCER_SELFTEST=1`, which unprunes it.
+`valid/` is left out of the validation stages of an ordinary `make verify`
+(kubeconform, helm, kyverno and terraform), so the repository's own gate stays
+fast and a fork does not inherit fixtures it never asked for. The static linters
+still check it, like any other tracked file. `make selftest` sets
+`BOUNCER_SELFTEST=1`, which brings it back in.
 
 | File | What it is for |
 | --- | --- |
@@ -50,9 +52,11 @@ make demo      # todos los fixtures de broken/ tienen que ser rechazados
 make selftest  # todo lo de valid/ tiene que pasar
 ```
 
-`valid/` queda excluido de un `make verify` normal, así el gate del propio repo
-sigue siendo rápido y quien forkee no arrastra fixtures que nunca pidió.
-`make selftest` setea `BOUNCER_SELFTEST=1`, que lo vuelve a incluir.
+`valid/` queda fuera de las etapas de validación de un `make verify` normal
+(kubeconform, helm, kyverno y terraform), así el gate del propio repo sigue
+siendo rápido y quien forkee no arrastra fixtures que nunca pidió. Los linters
+estáticos lo revisan igual, como a cualquier archivo trackeado. `make selftest`
+setea `BOUNCER_SELFTEST=1`, que lo vuelve a incluir.
 
 | Archivo | Para qué está |
 | --- | --- |
