@@ -75,9 +75,16 @@ fi
 
 # Without the fixtures a self-test has nothing to run over, and the gate would
 # pass on whatever else the repository holds: green for having tested nothing.
-if [ -n "${BOUNCER_SELFTEST:-}" ] && [ ! -d examples/valid ]; then
-  printf '%s\n' "$(msg selftest_no_fixtures)" >&2
-  exit 1
+# A partial copy is the same failure one stage at a time, since a stage with no
+# content skips instead of failing, so every file a stage relies on is checked.
+if [ -n "${BOUNCER_SELFTEST:-}" ]; then
+  for fixture in k8s/configmap.yaml k8s/kustomization.yaml chart/Chart.yaml \
+                 policy/kyverno-test.yaml terraform/main.tf terraform/README.md; do
+    if [ ! -f "examples/valid/$fixture" ]; then
+      printf '%s\n' "$(msg selftest_no_fixtures "examples/valid/$fixture")" >&2
+      exit 1
+    fi
+  done
 fi
 
 # scan <find-expr...>: NUL-separated paths with vendor directories pruned.
