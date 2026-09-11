@@ -27,31 +27,27 @@ What you get out of that is accuracy: whatever a check can catch gets caught,
 without depending on you to notice.
 
 ```text
-  you: "add the retry logic"
-        │
-        ▼
-┌───────────────── everything below happens without you ─────────────────┐
+    you: "add the retry logic"
+    │
+┌───┼───── everything below happens without you ─────────────────────────┐
+│   ▼                                                                    │
 │   agent edits a file                                                   │
-│         │                                                              │
-│         ▼                                                              │
-│   PostToolUse hook  ──▶  lints that one file, in under 2 seconds       │
-│         │                exit 2 drops the complaint straight           │
-│         │                into the agent's context                      │
-│         ▼                                                              │
-│   agent fixes it, unprompted, then tries to end the turn               │
-│         │                                                              │
-│         ▼                                                              │
-│   Stop hook         ──▶  runs `make verify`, the whole gate            │
-│         │                exit 2 blocks the turn and hands              │
-│         │                back the failure as the reason                │
-│         │                                     │                        │
-│         │   ◀─────────────────────────────────┘  round again           │
-│         │        (three rounds, then it gives up and says so)          │
-└────────────────────────────────────────────────────────────────────────┘
-        │
-        │  make verify passed
-        ▼
-  an answer that already passed the gate
+│   │                                                                    │
+│   ▼                                                                    │
+│   PostToolUse hook: lints that one file, in under 2 seconds            │
+│   │   exit 2 drops the complaint straight into the agent's context     │
+│   ▼                                                                    │
+│   agent fixes it and tries to end the turn ◀────────────────┐          │
+│   │                                                         │          │
+│   ▼                                                         │          │
+│   Stop hook: runs make verify, the whole gate               │          │
+│   ├─ exit 2: blocks the turn, hands the failure back ───────┘          │
+│   │     (three rounds, then it gives up and says so)                   │
+│   ▼                                                                    │
+└───┼────────────────────────────────────────────────────────────────────┘
+    │  make verify passed
+    ▼
+    an answer that already passed the gate
 ```
 
 A bouncer does not argue about whether you are on the list. Being extremely
@@ -497,31 +493,27 @@ Lo que ganás con eso es precisión: lo que un chequeo puede atrapar queda
 atrapado, sin depender de que vos te des cuenta.
 
 ```text
-  vos: "agregá la lógica de reintento"
-        │
-        ▼
-┌──────────────────── todo lo de abajo pasa sin vos ─────────────────────┐
+    vos: "agregá la lógica de reintento"
+    │
+┌───┼───── todo lo de abajo pasa sin vos ────────────────────────────────┐
+│   ▼                                                                    │
 │   el agente edita un archivo                                           │
-│         │                                                              │
-│         ▼                                                              │
-│   hook de PostToolUse  ──▶  lintea ese archivo, en menos de 2 segundos │
-│         │                   exit 2 le mete la queja derecho            │
-│         │                   en el contexto al agente                   │
-│         ▼                                                              │
-│   lo arregla solo, y recién ahí intenta terminar el turno              │
-│         │                                                              │
-│         ▼                                                              │
-│   hook de Stop         ──▶  corre `make verify`, el gate entero        │
-│         │                   exit 2 le frena el turno y le              │
-│         │                   devuelve la falla como motivo              │
-│         │                                      │                       │
-│         │   ◀──────────────────────────────────┘  otra vuelta          │
-│         │       (tres vueltas, después se rinde y lo dice)             │
-└────────────────────────────────────────────────────────────────────────┘
-        │
-        │  make verify pasó
-        ▼
-  una respuesta que ya pasó el gate
+│   │                                                                    │
+│   ▼                                                                    │
+│   hook de PostToolUse: lintea ese archivo, en menos de 2 segundos      │
+│   │   exit 2 le mete la queja derecho en el contexto al agente         │
+│   ▼                                                                    │
+│   el agente lo arregla e intenta terminar el turno ◀────────┐          │
+│   │                                                         │          │
+│   ▼                                                         │          │
+│   hook de Stop: corre make verify, el gate entero           │          │
+│   ├─ exit 2: frena el turno y le devuelve la falla ─────────┘          │
+│   │     (tres vueltas, después se rinde y lo dice)                     │
+│   ▼                                                                    │
+└───┼────────────────────────────────────────────────────────────────────┘
+    │  make verify pasó
+    ▼
+    una respuesta que ya pasó el gate
 ```
 
 Un patovica no discute si estás en la lista. Estar muy convencido de que estás
@@ -603,8 +595,8 @@ Probablemente no es para vos si:
 
 ### El elenco
 
-Seis cosas, en criollo. Si ya sabés qué es un linter y qué es un hook, saltá a
-[Probalo](#probalo).
+Seis cosas, en palabras simples. Si ya sabés qué es un linter y qué es un hook,
+saltá a [Probalo](#probalo).
 
 **El gate** es `make verify`. Un comando. Sale con cero o no sale con cero. Todo
 lo demás en Bouncer existe para correrlo en el momento justo, o para que su
