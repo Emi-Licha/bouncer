@@ -34,6 +34,9 @@ request.
 Reproduce a finding before acting on it. The reviewer has twice proposed a
 remedy worse than the defect it had found.
 
+Nothing is pushed while a review has a critical or high finding open. Fix it
+first, or show that it is not a defect.
+
 ### Tests
 
 TDD where it applies: write the test first, confirm it fails for the right
@@ -53,7 +56,10 @@ both versions.
 - `git commit --no-verify`, or any other bypass of the hooks.
 - Editing the hooks or the Makefile so a failing check passes.
 - Creating `.claude/.skip-verify` unprompted. It is the user's escape hatch.
-- Committing while the working tree holds files nobody reviewed.
+- Committing files nobody has looked at, such as stray or generated files left
+  in the working tree. This is about what goes into a commit, not about the
+  `reviewer` subagent, which runs after it.
+- Pushing while a review has a critical or high finding open.
 
 ### When something fails twice
 
@@ -90,6 +96,9 @@ informe es un artefacto que alguien puede querer pegar en un pull request.
 Reproducí un hallazgo antes de actuar sobre él. El reviewer ya propuso dos veces
 un remedio peor que el defecto que había encontrado.
 
+No se pushea nada mientras una review tenga un hallazgo crítico o alto abierto.
+Primero se arregla, o se muestra que no es un defecto.
+
 ### Tests
 
 TDD donde aplique: primero el test, confirmar que falla por la razón correcta,
@@ -109,7 +118,10 @@ español, las dos versiones.
 - `git commit --no-verify`, o cualquier otro bypass de los hooks.
 - Editar los hooks o el Makefile para que pase un check que falla.
 - Crear `.claude/.skip-verify` por cuenta propia. Es el escape del usuario.
-- Commitear con archivos en el working tree que nadie revisó.
+- Commitear archivos que nadie miró, como archivos sueltos o generados que
+  quedaron en el working tree. Esto habla de lo que entra en un commit, no del
+  subagente `reviewer`, que corre después.
+- Pushear con un hallazgo crítico o alto abierto en una review.
 
 ### Cuando algo falla dos veces
 

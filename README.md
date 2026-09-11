@@ -29,7 +29,7 @@ without depending on you to notice.
 ```text
     you: "add the retry logic"
     │
-┌───┼───── everything below happens without you ─────────────────────────┐
+┌───┼───── everything in this box happens without you ───────────────────┐
 │   ▼                                                                    │
 │   agent edits a file                                                   │
 │   │                                                                    │
@@ -48,6 +48,15 @@ without depending on you to notice.
     │  make verify passed
     ▼
     an answer that already passed the gate
+    │
+    ▼
+    commit
+    │
+    ▼
+    reviewer, when you ask for it: a second agent reads the diff
+    │   findings with severity and path:line, it fixes nothing
+    ▼
+    push, once no critical or high finding is left open
 ```
 
 A bouncer does not argue about whether you are on the list. Being extremely
@@ -172,6 +181,11 @@ Those linters are declared `repo: local`, meaning they call the same binaries
 of the conversation that produced it. It cannot see how anyone talked themselves
 into a decision, which is exactly the point. It reports. It does not fix.
 
+It is not part of the loop. It runs after the commit, when you ask for it, and
+nothing gets pushed while it has a critical or high finding open. A check that
+can answer differently for the same code cannot be a gate, so the reviewer stays
+a second opinion.
+
 And **`CLAUDE.md`** holds the rules your agent reads at the start of every
 session. Mostly one rule: fix the cause, never disable the check.
 
@@ -270,6 +284,9 @@ the Makefile or the hooks to get past it.
 
 Never use `git commit --no-verify`, and never create `.claude/.skip-verify`:
 that file is the user's escape hatch.
+
+After committing a milestone, review it with the `reviewer` subagent. Do not
+push while it has a critical or high finding open.
 
 When something fails twice, stop and ask instead of trying a third variation.
 ```
@@ -465,6 +482,9 @@ about five and a half minutes on a ninety-line diff, most of it spent verifying
 its own claims. `maxTurns` in its frontmatter caps how long it runs. Reproduce a
 finding before acting on it, either way.
 
+Nothing enforces the no-push rule. It lives in `CLAUDE.md`, not in a hook, so it
+holds only as long as whoever pushes follows it.
+
 ### License
 
 MIT. See [LICENSE](LICENSE).
@@ -495,7 +515,7 @@ atrapado, sin depender de que vos te des cuenta.
 ```text
     vos: "agregá la lógica de reintento"
     │
-┌───┼───── todo lo de abajo pasa sin vos ────────────────────────────────┐
+┌───┼───── todo lo de esta caja pasa sin vos ────────────────────────────┐
 │   ▼                                                                    │
 │   el agente edita un archivo                                           │
 │   │                                                                    │
@@ -514,6 +534,15 @@ atrapado, sin depender de que vos te des cuenta.
     │  make verify pasó
     ▼
     una respuesta que ya pasó el gate
+    │
+    ▼
+    commit
+    │
+    ▼
+    reviewer, cuando lo pedís: un segundo agente lee el diff
+    │   hallazgos con severidad y archivo:línea, no arregla nada
+    ▼
+    push, cuando no queda ningún hallazgo crítico o alto abierto
 ```
 
 Un patovica no discute si estás en la lista. Estar muy convencido de que estás
@@ -639,6 +668,11 @@ desacuerdo sobre qué significa "limpio". Esos linters están declarados como
 conversación que lo produjo. No puede ver cómo alguien se convenció a sí mismo
 de una decisión, que es exactamente el punto. Reporta. No arregla.
 
+No es parte del loop. Corre después del commit, cuando lo pedís, y no se pushea
+nada mientras tenga un hallazgo crítico o alto abierto. Un chequeo que puede
+responder distinto para el mismo código no puede ser un gate, así que el reviewer
+queda como segunda opinión.
+
 Y **`CLAUDE.md`** tiene las reglas que tu agente lee al empezar cada sesión.
 Básicamente una: arreglá la causa, nunca deshabilites el check.
 
@@ -738,6 +772,9 @@ the Makefile or the hooks to get past it.
 
 Never use `git commit --no-verify`, and never create `.claude/.skip-verify`:
 that file is the user's escape hatch.
+
+After committing a milestone, review it with the `reviewer` subagent. Do not
+push while it has a critical or high finding open.
 
 When something fails twice, stop and ask instead of trying a third variation.
 ```
@@ -938,6 +975,9 @@ revisiones más recientes trajeron siete hallazgos, seis reales. El precio es
 tiempo, unos cinco minutos y medio sobre un diff de noventa líneas, la mayor
 parte verificando sus propias afirmaciones. `maxTurns` en su frontmatter limita
 cuánto corre. Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
+
+Nada hace cumplir la regla de no pushear. Vive en `CLAUDE.md`, no en un hook, así
+que se sostiene solo mientras quien pushea la respete.
 
 ### Licencia
 
