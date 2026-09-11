@@ -398,9 +398,9 @@ block in `scripts/messages.sh`, and missing keys fall back to English, so a
 half-finished translation still works.
 
 The documentation check for Terraform is opt-in twice over. It runs only when a
-`.terraform-docs.yml` sets an output file, and then only on modules whose
-`README.md` carries the `BEGIN_TF_DOCS` marker, so a directory without it, such
-as a usage example, is left alone.
+`.terraform-docs.yml` sets an output file, and then only on modules where that
+file, `README.md` in Bouncer's config, carries the `BEGIN_TF_DOCS` marker. A
+directory without it, such as a usage example, is left alone.
 
 ### Design notes
 
@@ -905,8 +905,9 @@ falten caen a inglés, así que una traducción a medias ya sirve.
 
 El chequeo de documentación de Terraform es doblemente opcional. Corre solo si
 un `.terraform-docs.yml` define un archivo de salida, y aun así solo sobre los
-módulos cuyo `README.md` tenga el marcador `BEGIN_TF_DOCS`, así que un
-directorio sin él, como un ejemplo de uso, queda afuera.
+módulos donde ese archivo, `README.md` en la config de Bouncer, tenga el
+marcador `BEGIN_TF_DOCS`. Un directorio sin él, como un ejemplo de uso, queda
+afuera.
 
 ### Decisiones de diseño
 

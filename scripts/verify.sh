@@ -257,18 +257,27 @@ stage_terraform() {
   # repository root it checks a directory with no .tf at all and decides the
   # project README is missing terraform documentation. Pointed at every
   # directory holding a .tf it fails on examples/, which is a normal thing for a
-  # Terraform repository to have and which carries no generated docs. A README
-  # holding the BEGIN_TF_DOCS marker is the directory saying it wants them.
+  # Terraform repository to have and which carries no generated docs. The output
+  # file holding the BEGIN_TF_DOCS marker is the directory saying it wants them.
+  #
+  # The output file is read from the config, not assumed to be README.md: a
+  # module whose docs go to USAGE.md was otherwise never checked, and nothing
+  # said so. With no output file, or an empty one as in terraform-docs' own
+  # sample config, --output-check writes the rendered docs to stdout and exits 0
+  # however stale they are. It would report ok while checking nothing, so it is
+  # skipped out loud instead.
+  local tfdocs_file=""
+  if [ -f .terraform-docs.yml ]; then
+    tfdocs_file=$(sed -n 's/^[[:space:]]*file[[:space:]]*:[[:space:]]*//p' .terraform-docs.yml |
+                  head -1 | sed 's/[[:space:]]#.*$//; s/[[:space:]]*$//' | tr -d "\"'")
+  fi
   if [ ! -f .terraform-docs.yml ]; then
     skip "$(msg skip_tfdocs)"
-  elif ! grep -qE '^[[:space:]]*file[[:space:]]*:' .terraform-docs.yml; then
-    # With no output file configured, --output-check writes the rendered docs to
-    # stdout and exits 0 however stale the README is. It would report ok while
-    # checking nothing, so it is skipped out loud instead.
+  elif [ -z "$tfdocs_file" ]; then
     skip "$(msg skip_tfdocs_nooutput)"
   elif need terraform-docs ".terraform-docs.yml"; then
     while IFS= read -r -d '' d; do
-      if grep -q 'BEGIN_TF_DOCS' "$d/README.md" 2>/dev/null; then
+      if grep -q 'BEGIN_TF_DOCS' "$d/$tfdocs_file" 2>/dev/null; then
         run "terraform-docs $d" terraform-docs markdown table --output-check "$d"
       fi
     done < "$TMP/tfdirs.z"
