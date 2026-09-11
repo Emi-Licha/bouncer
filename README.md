@@ -182,7 +182,7 @@ session. Mostly one rule: fix the cause, never disable the check.
 ### Try it
 
 ```bash
-git clone https://github.com/emilianolicha-23/bouncer.git
+git clone https://github.com/Emi-Licha/bouncer.git
 cd bouncer
 make bootstrap
 ```
@@ -229,7 +229,7 @@ commands below call that directory `/path/to/bouncer`, and they all run from the
 root of your project:
 
 ```bash
-git clone https://github.com/emilianolicha-23/bouncer.git /path/to/bouncer
+git clone https://github.com/Emi-Licha/bouncer.git /path/to/bouncer
 mkdir -p .claude scripts
 cp -R /path/to/bouncer/.claude/hooks /path/to/bouncer/.claude/agents .claude/
 cp /path/to/bouncer/.claude/settings.json .claude/
@@ -653,7 +653,7 @@ Básicamente una: arreglá la causa, nunca deshabilites el check.
 ### Probalo
 
 ```bash
-git clone https://github.com/emilianolicha-23/bouncer.git
+git clone https://github.com/Emi-Licha/bouncer.git
 cd bouncer
 make bootstrap
 ```
@@ -701,7 +701,7 @@ Los comandos de abajo llaman a ese directorio `/ruta/a/bouncer`, y todos se
 corren desde la raíz de tu proyecto:
 
 ```bash
-git clone https://github.com/emilianolicha-23/bouncer.git /ruta/a/bouncer
+git clone https://github.com/Emi-Licha/bouncer.git /ruta/a/bouncer
 mkdir -p .claude scripts
 cp -R /ruta/a/bouncer/.claude/hooks /ruta/a/bouncer/.claude/agents .claude/
 cp /ruta/a/bouncer/.claude/settings.json .claude/
