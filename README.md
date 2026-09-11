@@ -224,8 +224,9 @@ ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
 Anything it lists already exists: do not copy over it. Merge it by hand, as
 described at the end of step 5.
 
-**2. Copy the files.** Clone Bouncer outside your project, shown here as
-`/path/to/bouncer`. Run all of this from the root of your project:
+**2. Copy the files.** Clone Bouncer into a directory outside your project. The
+commands below call that directory `/path/to/bouncer`, and they all run from the
+root of your project:
 
 ```bash
 git clone https://github.com/emilianolicha-23/bouncer.git /path/to/bouncer
@@ -697,8 +698,9 @@ ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
 Lo que liste ya existe: no lo sobrescribas. Combinalo a mano, como se explica al
 final del paso 5.
 
-**2. Copiá los archivos.** Cloná Bouncer fuera de tu proyecto, que abajo aparece
-como `/ruta/a/bouncer`. Corré todo esto desde la raíz de tu proyecto:
+**2. Copiá los archivos.** Cloná Bouncer en un directorio fuera de tu proyecto.
+Los comandos de abajo llaman a ese directorio `/ruta/a/bouncer`, y todos se
+corren desde la raíz de tu proyecto:
 
 ```bash
 git clone https://github.com/emilianolicha-23/bouncer.git /ruta/a/bouncer

@@ -84,7 +84,7 @@ decilo y lo cambiamos juntos.
 
 Los informes del subagente `reviewer` se relevan citándolos completos y en el
 idioma en que fueron escritos. Tu lectura del informe va después, separada de
-él. Un resumen pierde las severidades y las ubicaciones `archivo:línea`, y el
+él. Un resumen pierde las severidades y las ubicaciones `path:line`, y el
 informe es un artefacto que alguien puede querer pegar en un pull request.
 
 Reproducí un hallazgo antes de actuar sobre él. El reviewer ya propuso dos veces
