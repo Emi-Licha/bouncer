@@ -475,9 +475,7 @@ MIT. See [LICENSE](LICENSE).
 
 ## Español
 
-**Your agent says it's done. Bouncer checks the facts.**
-
-*Tu agente dice que está listo. Bouncer chequea los factos.*
+**Tu agente dice que está listo. Bouncer chequea los factos.**
 
 Porque casi nunca lo está.
 
