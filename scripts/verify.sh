@@ -78,8 +78,10 @@ fi
 # A partial copy is the same failure one stage at a time, since a stage with no
 # content skips instead of failing, so every file a stage relies on is checked.
 if [ -n "${BOUNCER_SELFTEST:-}" ]; then
-  for fixture in k8s/configmap.yaml k8s/kustomization.yaml chart/Chart.yaml \
-                 policy/kyverno-test.yaml terraform/main.tf terraform/README.md; do
+  for fixture in k8s/configmap.yaml k8s/kustomization.yaml \
+                 chart/Chart.yaml chart/values.yaml chart/templates/configmap.yaml \
+                 policy/kyverno-test.yaml \
+                 terraform/main.tf terraform/README.md terraform/.terraform-docs.yml; do
     if [ ! -f "examples/valid/$fixture" ]; then
       printf '%s\n' "$(msg selftest_no_fixtures "examples/valid/$fixture")" >&2
       exit 1
@@ -251,6 +253,28 @@ tf_validate() {
   terraform validate -no-color
 }
 
+# tfdocs_config <module dir>: the config terraform-docs will use for that
+# module, searched in its order: the module, the module's .config/, the current
+# directory, then its .config/. Prints nothing when there is none.
+tfdocs_config() {
+  local c
+  for c in "$1/.terraform-docs.yml" "$1/.config/.terraform-docs.yml" \
+           .terraform-docs.yml .config/.terraform-docs.yml; do
+    if [ -f "$c" ]; then
+      printf '%s' "$c"
+      return
+    fi
+  done
+}
+
+# tfdocs_output_file <config>: output.file, with quotes and a trailing comment
+# stripped. Only a file key under output: counts, since other sections of the
+# config can carry keys of the same name.
+tfdocs_output_file() {
+  sed -n '/^output[[:space:]]*:/,/^[^[:space:]#]/ s/^[[:space:]][[:space:]]*file[[:space:]]*:[[:space:]]*//p' "$1" |
+    head -1 | sed 's/[[:space:]]#.*$//; s/[[:space:]]*$//' | tr -d "\"'"
+}
+
 stage_terraform() {
   if [ "$(count -name '*.tf')" -eq 0 ]; then
     skip "$(msg skip_terraform)"
@@ -279,28 +303,38 @@ stage_terraform() {
   # Terraform repository to have and which carries no generated docs. The output
   # file holding the BEGIN_TF_DOCS marker is the directory saying it wants them.
   #
-  # The output file is read from the config, not assumed to be README.md: a
-  # module whose docs go to USAGE.md was otherwise never checked, and nothing
-  # said so. With no output file, or an empty one as in terraform-docs' own
-  # sample config, --output-check writes the rendered docs to stdout and exits 0
-  # however stale they are. It would report ok while checking nothing, so it is
-  # skipped out loud instead.
-  local tfdocs_file=""
-  if [ -f .terraform-docs.yml ]; then
-    tfdocs_file=$(sed -n 's/^[[:space:]]*file[[:space:]]*:[[:space:]]*//p' .terraform-docs.yml |
-                  head -1 | sed 's/[[:space:]]#.*$//; s/[[:space:]]*$//' | tr -d "\"'")
-  fi
-  if [ ! -f .terraform-docs.yml ]; then
-    skip "$(msg skip_tfdocs)"
-  elif [ -z "$tfdocs_file" ]; then
-    skip "$(msg skip_tfdocs_nooutput)"
-  elif need terraform-docs ".terraform-docs.yml"; then
-    while IFS= read -r -d '' d; do
-      if grep -q 'BEGIN_TF_DOCS' "$d/$tfdocs_file" 2>/dev/null; then
-        run "terraform-docs $d" terraform-docs markdown table --output-check "$d"
-      fi
-    done < "$TMP/tfdirs.z"
-  fi
+  # Each module is checked against the config terraform-docs will actually use
+  # for it, since a config in the module wins over the one at the root. The
+  # output file is read from that config, not assumed to be README.md: a module
+  # whose docs go to USAGE.md was otherwise never checked, and nothing said so.
+  # With no output file, or an empty one as in terraform-docs' own sample config,
+  # --output-check writes the rendered docs to stdout and exits 0 however stale
+  # they are. It would report ok while checking nothing, so it is skipped out
+  # loud instead, once per config.
+  local cfg file any_cfg="" tfdocs_ready="" reported=$'\n'
+  while IFS= read -r -d '' d; do
+    cfg=$(tfdocs_config "$d")
+    [ -n "$cfg" ] || continue
+    any_cfg=1
+    file=$(tfdocs_output_file "$cfg")
+    if [ -z "$file" ]; then
+      case "$reported" in
+        *$'\n'"$cfg"$'\n'*) ;;
+        *)
+          skip "$(msg skip_tfdocs_nooutput "$cfg")"
+          reported="${reported}${cfg}"$'\n'
+          ;;
+      esac
+      continue
+    fi
+    grep -q 'BEGIN_TF_DOCS' "$d/$file" 2>/dev/null || continue
+    if [ -z "$tfdocs_ready" ]; then
+      need terraform-docs "$cfg" || break
+      tfdocs_ready=1
+    fi
+    run "terraform-docs $d" terraform-docs markdown table --output-check "$d"
+  done < "$TMP/tfdirs.z"
+  [ -n "$any_cfg" ] || skip "$(msg skip_tfdocs)"
   # Providers are downloaded from the network but need no cloud credentials.
   # The shared plugin cache keeps repeated runs inside the 3 minute budget.
   TF_PLUGIN_CACHE_DIR="${TF_PLUGIN_CACHE_DIR:-$HOME/.terraform.d/plugin-cache}"

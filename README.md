@@ -358,7 +358,6 @@ The pieces, and none of them is clever:
 | `.claude/agents/reviewer.md` | The reviewer's instructions and its tool permissions. |
 | `.pre-commit-config.yaml` | The single definition of every fast static check. |
 | `.yamllint.yml`, `.markdownlint.yaml` | Settings for those two linters. |
-| `.terraform-docs.yml` | Turns on the documentation check for Terraform modules. |
 | `examples/` | The fixtures for `make demo` and `make selftest`. |
 | `CLAUDE.md` | The rules your agent reads. |
 
@@ -402,10 +401,11 @@ have to fight. `make lang` says which is active. A third language is one `case`
 block in `scripts/messages.sh`, and missing keys fall back to English, so a
 half-finished translation still works.
 
-The documentation check for Terraform is opt-in twice over. It runs only when a
-`.terraform-docs.yml` sets an output file, and then only on modules where that
-file, `README.md` in Bouncer's config, carries the `BEGIN_TF_DOCS` marker. A
-directory without it, such as a usage example, is left alone.
+The documentation check for Terraform is opt-in twice over. It runs only where a
+`.terraform-docs.yml` sets an output file, found the way terraform-docs finds it:
+in the module first, then at the root. And then only on modules where that file
+carries the `BEGIN_TF_DOCS` marker, so a directory without it, such as a usage
+example, is left alone.
 
 ### Design notes
 
@@ -874,7 +874,6 @@ Las piezas, y ninguna es ingeniosa:
 | `.claude/agents/reviewer.md` | Las instrucciones del reviewer y sus permisos de herramientas. |
 | `.pre-commit-config.yaml` | La única definición de los checks estáticos rápidos. |
 | `.yamllint.yml`, `.markdownlint.yaml` | La configuración de esos dos linters. |
-| `.terraform-docs.yml` | Activa el chequeo de documentación de los módulos de Terraform. |
 | `examples/` | Los fixtures de `make demo` y `make selftest`. |
 | `CLAUDE.md` | Las reglas que lee tu agente. |
 
@@ -918,11 +917,11 @@ personal nunca tienen que pelearse. `make lang` te dice cuál está activo. Un
 tercer idioma es un bloque `case` en `scripts/messages.sh`, y las claves que
 falten caen a inglés, así que una traducción a medias ya sirve.
 
-El chequeo de documentación de Terraform es doblemente opcional. Corre solo si
-un `.terraform-docs.yml` define un archivo de salida, y aun así solo sobre los
-módulos donde ese archivo, `README.md` en la config de Bouncer, tenga el
-marcador `BEGIN_TF_DOCS`. Un directorio sin él, como un ejemplo de uso, queda
-afuera.
+El chequeo de documentación de Terraform es doblemente opcional. Corre solo
+donde un `.terraform-docs.yml` define un archivo de salida, buscado igual que lo
+busca terraform-docs: primero en el módulo, después en la raíz. Y aun así solo
+sobre los módulos donde ese archivo tenga el marcador `BEGIN_TF_DOCS`, así que
+un directorio sin él, como un ejemplo de uso, queda afuera.
 
 ### Decisiones de diseño
 

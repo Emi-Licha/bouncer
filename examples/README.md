@@ -34,7 +34,7 @@ still check it, like any other tracked file. `make selftest` sets
 | `valid/k8s/` | A plain manifest and a kustomization, so `kubeconform` has something to validate and the e2e stage something to apply. |
 | `valid/chart/` | A minimal chart. Its templates are Go template text, so they are left out of `kubeconform` and `yamllint` and checked only through `helm template`. |
 | `valid/policy/` | A kyverno policy with a test that passes. |
-| `valid/terraform/` | A module with a generated README, which is what opts it into the `terraform-docs` check. |
+| `valid/terraform/` | A module with its own `.terraform-docs.yml` and a generated README, which is what opts it into the `terraform-docs` check. |
 
 Adding a fixture to `broken/` means adding a matching assertion in
 `scripts/demo.sh`; without one it is just an invalid file nobody looks at.
@@ -66,7 +66,7 @@ setea `BOUNCER_SELFTEST=1`, que lo vuelve a incluir.
 | `valid/k8s/` | Un manifiesto plano y una kustomization, para que `kubeconform` tenga algo que validar y la etapa e2e algo que aplicar. |
 | `valid/chart/` | Un chart mínimo. Sus templates son texto Go template, así que quedan fuera de `kubeconform` y `yamllint` y se revisan solo vía `helm template`. |
 | `valid/policy/` | Una policy de kyverno con un test que pasa. |
-| `valid/terraform/` | Un módulo con README generado, que es lo que lo hace entrar al check de `terraform-docs`. |
+| `valid/terraform/` | Un módulo con su propio `.terraform-docs.yml` y README generado, que es lo que lo hace entrar al check de `terraform-docs`. |
 
 Agregar un fixture a `broken/` implica agregar su assertion en `scripts/demo.sh`;
 sin ella es solo un archivo inválido que nadie mira. Agregar uno a `valid/` no
