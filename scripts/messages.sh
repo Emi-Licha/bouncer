@@ -65,6 +65,8 @@ msg_en() {
     demo_missed)        printf 'THE GATE MISSED IT: a non-zero exit was expected' ;;
     demo_failed)        printf 'demo FAILED: at least one fixture was not rejected.' ;;
     demo_ok)            printf 'demo OK: every fixture was rejected, as it should be.' ;;
+    demo_no_fixtures)   printf 'demo cannot run: %%s is missing. Copy examples/ from Bouncer, or skip make demo.' ;;
+    selftest_no_fixtures) printf 'selftest cannot run: examples/valid is missing. Copy examples/ from Bouncer, or skip make selftest.' ;;
     demo_case_shell)    printf 'shellcheck: an unquoted, undefined variable' ;;
     demo_case_yaml)     printf 'yamllint: invalid indentation' ;;
     demo_case_docker)   printf 'hadolint: untagged base image, no apt cleanup' ;;
@@ -129,6 +131,8 @@ msg_es() {
     demo_missed)        printf 'EL GATE NO LO ATRAPÓ: se esperaba un exit distinto de cero' ;;
     demo_failed)        printf 'demo FALLÓ: al menos un fixture no fue rechazado.' ;;
     demo_ok)            printf 'demo OK: todos los fixtures fueron rechazados, como corresponde.' ;;
+    demo_no_fixtures)   printf 'demo no puede correr: falta %%s. Copiá examples/ de Bouncer, o no uses make demo.' ;;
+    selftest_no_fixtures) printf 'selftest no puede correr: falta examples/valid. Copiá examples/ de Bouncer, o no uses make selftest.' ;;
     demo_case_shell)    printf 'shellcheck: una variable sin comillas y sin definir' ;;
     demo_case_yaml)     printf 'yamllint: indentación inválida' ;;
     demo_case_docker)   printf 'hadolint: imagen base sin tag, sin limpieza de apt' ;;

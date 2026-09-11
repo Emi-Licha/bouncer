@@ -43,6 +43,15 @@ expect_reject() {
   fi
 }
 
+# A missing fixture makes its linter fail with "file not found", which would
+# count as a rejection and report the demo as passing. Check they exist first.
+for f in "$DIR/unquoted-var.sh" "$DIR/bad-indent.yaml" "$DIR/Dockerfile"; do
+  if [ ! -f "$f" ]; then
+    printf '%s%s%s\n' "$R" "$(msg demo_no_fixtures "$f")" "$O" >&2
+    exit 1
+  fi
+done
+
 msg demo_intro; echo
 
 expect_reject shellcheck "$(msg demo_case_shell)" \

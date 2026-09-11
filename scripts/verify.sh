@@ -73,6 +73,13 @@ else
   VALID_PRUNE='./examples/valid'
 fi
 
+# Without the fixtures a self-test has nothing to run over, and the gate would
+# pass on whatever else the repository holds: green for having tested nothing.
+if [ -n "${BOUNCER_SELFTEST:-}" ] && [ ! -d examples/valid ]; then
+  printf '%s\n' "$(msg selftest_no_fixtures)" >&2
+  exit 1
+fi
+
 # scan <find-expr...>: NUL-separated paths with vendor directories pruned.
 # NUL rather than newline because filenames may contain spaces.
 # examples/broken holds fixtures that are invalid on purpose, so the gate can be
