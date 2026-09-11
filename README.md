@@ -2,8 +2,6 @@
 
 **[English](#english)** | **[Español](#español)**
 
-![Bouncer](assets/bouncer-wordmark.svg)
-
 ## English
 
 **Your agent says it's done. Bouncer checks the facts.**
@@ -98,6 +96,33 @@ is not prompt engineering. There is no orchestration anywhere in it: two events
 and one command, sitting in your repository, changing what your agent is allowed
 to do.
 
+### Who it is for
+
+- **You use Claude Code every day** and you are tired of the second prompt, the
+  one that says "the lint is failing, fix it". Bouncer makes that prompt
+  unnecessary.
+- **You write infrastructure with an agent.** Terraform, Kubernetes manifests,
+  Helm charts, Kyverno policies: places where a plausible-looking mistake costs
+  more than a failed build. That is the stack Bouncer checks out of the box.
+- **Your team wants one Definition of Done for AI-assisted changes.** The same
+  gate runs for every person and every agent, and the same checks run again at
+  `git commit`.
+- **You review what an agent produced.** The diff reaches you already linted and
+  validated, so review time goes on design instead of unquoted variables.
+- **You are building your own harness.** The exit code semantics, the traps and
+  the record of what was actually tested are the parts that are hard to find
+  written down anywhere else.
+
+It is probably not for you if:
+
+- **Your agent is not Claude Code.** The loop depends on Claude Code hooks.
+  `make verify` and `pre-commit` still work anywhere, but nothing stops the turn.
+- **Your stack is JavaScript, Go, Java or Rust.** No linters for those are wired
+  in yet. Adding one is an entry in `.pre-commit-config.yaml`, but out of the box
+  Bouncer would skip your code.
+- **You need it on Windows**, or you want it to replace CI. It is tested on
+  macOS, and it runs on your machine, not on a server.
+
 ### The cast
 
 Five things, in plain language. If you already know what a linter and a hook are,
@@ -170,6 +195,82 @@ Helm chart, Kyverno policy and Kubernetes manifest, and has to pass.
 Between the two you have watched it reject what it should and accept what it
 should, on your own machine, in about ten seconds. Nothing here asks to be taken
 on faith.
+
+### Install it in your own project
+
+"Try it" runs inside this repository. To put Bouncer in front of your own agent,
+copy it into your project. It is a handful of files, so installing is copying.
+
+**1. Check for files you would overwrite.**
+
+```bash
+ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md
+```
+
+If any of those already exist, do not copy over them. Merge them by hand, as
+described at the end of step 5.
+
+**2. Copy the files.** From a clone of this repository, shown here as
+`/path/to/bouncer`, standing in the root of your project:
+
+```bash
+mkdir -p .claude scripts
+cp -R /path/to/bouncer/.claude/hooks /path/to/bouncer/.claude/agents .claude/
+cp /path/to/bouncer/.claude/settings.json .claude/
+cp /path/to/bouncer/scripts/*.sh scripts/
+cp /path/to/bouncer/Makefile /path/to/bouncer/.pre-commit-config.yaml .
+cp /path/to/bouncer/.yamllint.yml /path/to/bouncer/.markdownlint.yaml .
+```
+
+If you also want `make demo` and `make selftest`, copy the fixtures they run
+against. Without them both commands refuse to run rather than pass on nothing.
+
+```bash
+cp -R /path/to/bouncer/examples .
+```
+
+**3. Keep Bouncer's scratch files out of git.**
+
+```bash
+printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n' >> .gitignore
+```
+
+**4. Install the tools and the git hook, then track the new files.** `pre-commit`
+only checks files git is tracking.
+
+```bash
+make bootstrap
+git add .claude scripts Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml .gitignore
+```
+
+**5. Tell your agent the rules.** Add this to your `CLAUDE.md`, creating it if it
+does not exist:
+
+```markdown
+## Definition of Done
+
+Nothing is done until `make verify` passes. If the Stop hook blocks the turn,
+fix the cause. Never disable a check, lower a threshold, skip a test, or edit
+the Makefile or the hooks to get past it.
+
+Never use `git commit --no-verify`, and never create `.claude/.skip-verify`:
+that file is the user's escape hatch.
+
+When something fails twice, stop and ask instead of trying a third variation.
+```
+
+If step 1 found existing files, merge instead of copying:
+
+- `.claude/settings.json`: copy the `hooks` block from Bouncer's into yours.
+- `Makefile`: copy the targets you want. `verify` is required, because it is the
+  one the Stop hook calls.
+- `.pre-commit-config.yaml`: add Bouncer's `repos` entries to yours.
+- `CLAUDE.md`: append the block above.
+
+**6. Restart Claude Code and prove the gate is live.** Hooks are read when a
+session starts, so nothing is armed until you restart. Then run the three checks
+in [the trap](#the-trap). Do not skip them: a gate you have never seen block
+anything is a gate you do not have.
 
 ### What you get
 
@@ -293,6 +394,10 @@ believed. All of this was run on macOS, end to end, against the real runtime:
 - `bootstrap` on all three of its branches, and the exit code each returns.
 - Both languages everywhere, the reviewer included: asked in Spanish with the
   English default in place, it answered in English.
+- Installing into an empty project by following the install steps above to
+  the letter: `make verify` green on clean content and red on a broken script,
+  both hooks exiting 2, and `make demo` and `make selftest` refusing to run when
+  the fixtures were not copied.
 
 Everything except the coverage floor is reproducible with `make demo` and
 `make selftest`. The floor is the exception, because the Python stage looks for
@@ -322,7 +427,9 @@ MIT. See [LICENSE](LICENSE).
 
 ## Español
 
-**Tu agente dice que está listo. Bouncer chequea los factos.**
+**Your agent says it's done. Bouncer checks the facts.**
+
+*Tu agente dice que está listo. Bouncer chequea los factos.*
 
 Porque casi nunca lo está.
 
@@ -414,6 +521,33 @@ graph, y tampoco es ingeniería de prompts. No hay orquestación en ningún lado
 eventos y un comando, viviendo en tu repo, cambiando lo que tu agente tiene
 permitido hacer.
 
+### A quién le sirve
+
+- **Usás Claude Code todos los días** y te cansaste del segundo prompt, el de
+  "está fallando el lint, arreglalo". Bouncer hace que ese prompt sobre.
+- **Escribís infraestructura con un agente.** Terraform, manifiestos de
+  Kubernetes, charts de Helm, policies de Kyverno: lugares donde un error que
+  parece razonable sale más caro que un build roto. Es el stack que Bouncer
+  chequea de fábrica.
+- **Tu equipo quiere una sola definición de terminado para cambios hechos con
+  IA.** El mismo gate corre para cada persona y cada agente, y los mismos checks
+  vuelven a correr en el `git commit`.
+- **Revisás lo que produce un agente.** El diff te llega ya linteado y validado,
+  así que el tiempo de review se va en diseño y no en variables sin comillas.
+- **Estás armando tu propio harness.** La semántica de los exit codes, las
+  trampas y el registro de qué se probó de verdad son justo lo que cuesta
+  encontrar escrito en otro lado.
+
+Probablemente no es para vos si:
+
+- **Tu agente no es Claude Code.** El loop depende de los hooks de Claude Code.
+  `make verify` y `pre-commit` andan en cualquier lado, pero nada frena el turno.
+- **Tu stack es JavaScript, Go, Java o Rust.** Todavía no hay linters conectados
+  para esos. Agregar uno es una entrada en `.pre-commit-config.yaml`, pero tal
+  como viene Bouncer se saltearía tu código.
+- **Lo necesitás en Windows**, o querés que reemplace a tu CI. Está probado en
+  macOS y corre en tu máquina, no en un servidor.
+
 ### El elenco
 
 Cinco cosas, en criollo. Si ya sabés qué es un linter y qué es un hook, saltá a
@@ -488,6 +622,84 @@ y tiene que pasar.
 
 Entre los dos ya lo viste rechazar lo que debe y aceptar lo que debe, en tu
 propia máquina, en unos diez segundos. Acá no hay nada que tengas que creer.
+
+### Instalalo en tu proyecto
+
+"Probalo" corre adentro de este repositorio. Para ponerle Bouncer adelante a tu
+propio agente, copialo a tu proyecto. Son un puñado de archivos, así que
+instalarlo es copiarlos.
+
+**1. Fijate si vas a pisar algún archivo.**
+
+```bash
+ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md
+```
+
+Si alguno ya existe, no lo sobreescribas. Mergealo a mano, como se explica al
+final del paso 5.
+
+**2. Copiá los archivos.** Desde un clon de este repositorio, que abajo aparece
+como `/ruta/a/bouncer`, parado en la raíz de tu proyecto:
+
+```bash
+mkdir -p .claude scripts
+cp -R /ruta/a/bouncer/.claude/hooks /ruta/a/bouncer/.claude/agents .claude/
+cp /ruta/a/bouncer/.claude/settings.json .claude/
+cp /ruta/a/bouncer/scripts/*.sh scripts/
+cp /ruta/a/bouncer/Makefile /ruta/a/bouncer/.pre-commit-config.yaml .
+cp /ruta/a/bouncer/.yamllint.yml /ruta/a/bouncer/.markdownlint.yaml .
+```
+
+Si además querés `make demo` y `make selftest`, copiá los fixtures contra los que
+corren. Sin ellos, los dos comandos se niegan a correr en vez de pasar sin haber
+probado nada.
+
+```bash
+cp -R /ruta/a/bouncer/examples .
+```
+
+**3. Dejá los archivos temporales de Bouncer fuera de git.**
+
+```bash
+printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n' >> .gitignore
+```
+
+**4. Instalá las herramientas y el hook de git, y trackeá los archivos nuevos.**
+`pre-commit` solo revisa lo que git está trackeando.
+
+```bash
+make bootstrap
+git add .claude scripts Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml .gitignore
+```
+
+**5. Contale las reglas a tu agente.** Agregá esto a tu `CLAUDE.md`, y crealo si
+no existe:
+
+```markdown
+## Definition of Done
+
+Nothing is done until `make verify` passes. If the Stop hook blocks the turn,
+fix the cause. Never disable a check, lower a threshold, skip a test, or edit
+the Makefile or the hooks to get past it.
+
+Never use `git commit --no-verify`, and never create `.claude/.skip-verify`:
+that file is the user's escape hatch.
+
+When something fails twice, stop and ask instead of trying a third variation.
+```
+
+Si en el paso 1 encontraste archivos existentes, mergealos en vez de copiar:
+
+- `.claude/settings.json`: copiá el bloque `hooks` del de Bouncer al tuyo.
+- `Makefile`: copiá los targets que quieras. `verify` es obligatorio, porque es
+  el que llama el hook de Stop.
+- `.pre-commit-config.yaml`: sumá las entradas de `repos` de Bouncer a las tuyas.
+- `CLAUDE.md`: agregá el bloque de arriba al final.
+
+**6. Reiniciá Claude Code y comprobá que el gate está vivo.** Los hooks se leen
+al arrancar la sesión, así que nada queda armado hasta que reinicies. Después
+corré los tres chequeos de [la trampa](#la-trampa). No te los saltees: un gate
+que nunca viste bloquear nada es un gate que no tenés.
 
 ### Qué te llevás
 
@@ -617,6 +829,10 @@ real:
 - `bootstrap` en sus tres ramas, con el código de salida de cada una.
 - Los dos idiomas en todos lados, incluido el reviewer: preguntado en castellano
   y con el default en inglés puesto, contestó en inglés.
+- Instalarlo en un proyecto vacío siguiendo al pie de la letra los pasos de
+  instalación de arriba: `make verify` en verde con contenido limpio y en rojo
+  con un script roto, los dos hooks saliendo con 2, y `make demo` y
+  `make selftest` negándose a correr cuando no se copiaron los fixtures.
 
 Todo salvo el piso de cobertura es reproducible con `make demo` y
 `make selftest`. El piso es la excepción, porque la etapa de Python busca `src/`,
