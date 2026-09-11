@@ -29,7 +29,13 @@ without depending on you to notice.
 ```text
     you: "add the retry logic"
     │
-┌───┼───── everything in this box happens without you ───────────────────┐
+┌╌╌╌┼╌╌╌╌╌ CLAUDE.md asks for this ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐
+╎   ▼                                                                    ╎
+╎   agent lays out its plan in three lines and gets going                ╎
+╎   │   so you know what it is about to do, and can stop it              ╎
+╎   │                                                                    ╎
+└╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘
+┌───┼───── the hooks guarantee this, without you ────────────────────────┐
 │   ▼                                                                    │
 │   agent edits a file                                                   │
 │   │                                                                    │
@@ -37,27 +43,34 @@ without depending on you to notice.
 │   PostToolUse hook: lints that one file, in under 2 seconds            │
 │   │   exit 2 drops the complaint straight into the agent's context     │
 │   ▼                                                                    │
-│   agent fixes it and tries to end the turn ◀────────────────┐          │
-│   │                                                         │          │
-│   ▼                                                         │          │
-│   Stop hook: runs make verify, the whole gate               │          │
-│   ├─ exit 2: blocks the turn, hands the failure back ───────┘          │
+│   agent fixes it and tries to end the turn ◀───────────────┐           │
+│   │                                                        │           │
+│   ▼                                                        │           │
+│   Stop hook: runs make verify, the whole gate              │           │
+│   ├─ exit 2: blocks the turn, hands the failure back ──────┘           │
 │   │     (three rounds, then it gives up and says so)                   │
-│   ▼                                                                    │
+│   │                                                                    │
 └───┼────────────────────────────────────────────────────────────────────┘
     │  make verify passed
-    ▼
-    an answer that already passed the gate
+┌╌╌╌┼╌╌╌╌╌ CLAUDE.md asks for this ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐
+╎   ▼                                                                    ╎
+╎   commit                                                               ╎
+╎   │                                                                    ╎
+╎   ▼                                                                    ╎
+╎   reviewer: a second agent reads the diff, no memory of the chat       ╎
+╎   │   findings with severity and path:line, it fixes nothing           ╎
+╎   ▼                                                                    ╎
+╎   agent stops and hands you the report                                 ╎
+╎   │                                                                    ╎
+└╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘
     │
     ▼
-    commit
-    │
-    ▼
-    reviewer, when you ask for it: a second agent reads the diff
-    │   findings with severity and path:line, it fixes nothing
-    ▼
-    push, once no critical or high finding is left open
+    you: push, once no critical or high finding is left open
 ```
+
+A solid box is enforced by a hook, and there is no way around it. A dashed box
+is something `CLAUDE.md` asks for: the agent follows it, but nothing forces it
+to.
 
 A bouncer does not argue about whether you are on the list. Being extremely
 confident that you are on the list does not get you in. That is the whole idea.
@@ -181,10 +194,10 @@ Those linters are declared `repo: local`, meaning they call the same binaries
 of the conversation that produced it. It cannot see how anyone talked themselves
 into a decision, which is exactly the point. It reports. It does not fix.
 
-It is not part of the loop. It runs after the commit, when you ask for it, and
-nothing gets pushed while it has a critical or high finding open. A check that
-can answer differently for the same code cannot be a gate, so the reviewer stays
-a second opinion.
+It is not part of the loop. The agent runs it after the commit because
+`CLAUDE.md` tells it to, and nothing gets pushed while it has a critical or high
+finding open. A check that can answer differently for the same code cannot be a
+gate, so the reviewer stays a second opinion.
 
 And **`CLAUDE.md`** holds the rules your agent reads at the start of every
 session. Mostly one rule: fix the cause, never disable the check.
@@ -277,6 +290,9 @@ it does not exist:
 
 ```markdown
 ## Definition of Done
+
+Before you start, lay out your plan in three lines and go ahead. It is not a
+request for approval: it lets the user stop you if they disagree.
 
 Nothing is done until `make verify` passes. If the Stop hook blocks the turn,
 fix the cause. Never disable a check, lower a threshold, skip a test, or edit
@@ -482,8 +498,9 @@ about five and a half minutes on a ninety-line diff, most of it spent verifying
 its own claims. `maxTurns` in its frontmatter caps how long it runs. Reproduce a
 finding before acting on it, either way.
 
-Nothing enforces the no-push rule. It lives in `CLAUDE.md`, not in a hook, so it
-holds only as long as whoever pushes follows it.
+Nothing enforces what `CLAUDE.md` asks for: the plan, the commit, the review and
+the no-push rule. They are instructions, not hooks, so they hold only as long as
+the agent, and whoever pushes, follows them.
 
 ### License
 
@@ -515,7 +532,13 @@ atrapado, sin depender de que vos te des cuenta.
 ```text
     vos: "agregá la lógica de reintento"
     │
-┌───┼───── todo lo de esta caja pasa sin vos ────────────────────────────┐
+┌╌╌╌┼╌╌╌╌╌ lo pide CLAUDE.md ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐
+╎   ▼                                                                    ╎
+╎   el agente te cuenta el plan en tres líneas y arranca                 ╎
+╎   │   para que sepas qué encara y lo frenes si no te cierra            ╎
+╎   │                                                                    ╎
+└╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘
+┌───┼───── lo garantizan los hooks, sin vos ─────────────────────────────┐
 │   ▼                                                                    │
 │   el agente edita un archivo                                           │
 │   │                                                                    │
@@ -523,27 +546,33 @@ atrapado, sin depender de que vos te des cuenta.
 │   hook de PostToolUse: lintea ese archivo, en menos de 2 segundos      │
 │   │   exit 2 le mete la queja derecho en el contexto al agente         │
 │   ▼                                                                    │
-│   el agente lo arregla e intenta terminar el turno ◀────────┐          │
-│   │                                                         │          │
-│   ▼                                                         │          │
-│   hook de Stop: corre make verify, el gate entero           │          │
-│   ├─ exit 2: frena el turno y le devuelve la falla ─────────┘          │
+│   el agente lo arregla e intenta terminar el turno ◀───────┐           │
+│   │                                                        │           │
+│   ▼                                                        │           │
+│   hook de Stop: corre make verify, el gate entero          │           │
+│   ├─ exit 2: frena el turno y le devuelve la falla ────────┘           │
 │   │     (tres vueltas, después se rinde y lo dice)                     │
-│   ▼                                                                    │
+│   │                                                                    │
 └───┼────────────────────────────────────────────────────────────────────┘
     │  make verify pasó
-    ▼
-    una respuesta que ya pasó el gate
+┌╌╌╌┼╌╌╌╌╌ lo pide CLAUDE.md ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐
+╎   ▼                                                                    ╎
+╎   commit                                                               ╎
+╎   │                                                                    ╎
+╎   ▼                                                                    ╎
+╎   reviewer: un segundo agente lee el diff, sin memoria de la charla    ╎
+╎   │   hallazgos con severidad y archivo:línea, no arregla nada         ╎
+╎   ▼                                                                    ╎
+╎   el agente para y te pasa el informe                                  ╎
+╎   │                                                                    ╎
+└╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘
     │
     ▼
-    commit
-    │
-    ▼
-    reviewer, cuando lo pedís: un segundo agente lee el diff
-    │   hallazgos con severidad y archivo:línea, no arregla nada
-    ▼
-    push, cuando no queda ningún hallazgo crítico o alto abierto
+    vos: push, cuando no queda ningún hallazgo crítico o alto abierto
 ```
+
+Una caja continua la hace cumplir un hook, y no hay forma de saltearla. Una caja
+punteada es algo que pide `CLAUDE.md`: el agente lo sigue, pero nada lo obliga.
 
 Un patovica no discute si estás en la lista. Estar muy convencido de que estás
 en la lista no te hace entrar. Esa es toda la idea.
@@ -668,10 +697,10 @@ desacuerdo sobre qué significa "limpio". Esos linters están declarados como
 conversación que lo produjo. No puede ver cómo alguien se convenció a sí mismo
 de una decisión, que es exactamente el punto. Reporta. No arregla.
 
-No es parte del loop. Corre después del commit, cuando lo pedís, y no se pushea
-nada mientras tenga un hallazgo crítico o alto abierto. Un chequeo que puede
-responder distinto para el mismo código no puede ser un gate, así que el reviewer
-queda como segunda opinión.
+No es parte del loop. El agente lo corre después del commit porque `CLAUDE.md`
+se lo pide, y no se pushea nada mientras tenga un hallazgo crítico o alto
+abierto. Un chequeo que puede responder distinto para el mismo código no puede
+ser un gate, así que el reviewer queda como segunda opinión.
 
 Y **`CLAUDE.md`** tiene las reglas que tu agente lee al empezar cada sesión.
 Básicamente una: arreglá la causa, nunca deshabilites el check.
@@ -765,6 +794,9 @@ no existe:
 
 ```markdown
 ## Definition of Done
+
+Before you start, lay out your plan in three lines and go ahead. It is not a
+request for approval: it lets the user stop you if they disagree.
 
 Nothing is done until `make verify` passes. If the Stop hook blocks the turn,
 fix the cause. Never disable a check, lower a threshold, skip a test, or edit
@@ -976,8 +1008,9 @@ tiempo, unos cinco minutos y medio sobre un diff de noventa líneas, la mayor
 parte verificando sus propias afirmaciones. `maxTurns` en su frontmatter limita
 cuánto corre. Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
 
-Nada hace cumplir la regla de no pushear. Vive en `CLAUDE.md`, no en un hook, así
-que se sostiene solo mientras quien pushea la respete.
+Nada hace cumplir lo que pide `CLAUDE.md`: el plan, el commit, la review y la
+regla de no pushear. Son instrucciones, no hooks, así que se sostienen solo
+mientras el agente, y quien pushea, las respete.
 
 ### Licencia
 

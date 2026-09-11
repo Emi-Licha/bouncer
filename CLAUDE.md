@@ -15,13 +15,13 @@ so and we change it together.
 
 ### Milestone flow
 
-1. A three-line plan.
-2. Wait for approval.
-3. Implement.
-4. `make verify`.
-5. Commit.
-6. Review with the `reviewer` subagent.
-7. Stop.
+1. A three-line plan, then go ahead. It is not a request for approval: it lets
+   the user see what you are about to do and stop you if they disagree.
+2. Implement.
+3. `make verify`.
+4. Commit.
+5. Review with the `reviewer` subagent.
+6. Stop.
 
 ### Reviews
 
@@ -78,13 +78,13 @@ decilo y lo cambiamos juntos.
 
 ### Flujo por milestone
 
-1. Plan de tres líneas.
-2. Esperar aprobación.
-3. Implementar.
-4. `make verify`.
-5. Commit.
-6. Review con el subagente `reviewer`.
-7. Parar.
+1. Plan de tres líneas, y seguir. No es un pedido de aprobación: es para que el
+   usuario vea qué vas a encarar y te frene si no está de acuerdo.
+2. Implementar.
+3. `make verify`.
+4. Commit.
+5. Review con el subagente `reviewer`.
+6. Parar.
 
 ### Revisiones
 
