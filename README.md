@@ -2,9 +2,20 @@
 
 **[English](#english)** | **[Español](#español)**
 
+```text
+______  _____ _   _ _   _ _____  ___________
+| ___ \|  _  | | | | \ | /  __ \|  ___| ___ \
+| |_/ /| | | | | | |  \| | /  \/| |__ | |_/ /
+| ___ \| | | | | | | . ` | |    |  __||    /
+| |_/ /\ \_/ / |_| | |\  | \__/\| |___| |\ \
+\____/  \___/ \___/\_| \_/\____/\____/\_| \_|
+```
+
 ## English
 
-Your agent tells you it is done. It usually is not.
+**Your agent says it's done. Bouncer checks the facts.**
+
+Because it usually is not.
 
 So you read the diff, you find the unquoted variable, you prompt again, it tells
 you it is done again, and there goes your afternoon. The problem is not that the
@@ -46,6 +57,14 @@ What you get out of that is accuracy that does not depend on you noticing.
 
 A bouncer does not argue about whether you are on the list. Being extremely
 confident that you are on the list does not get you in. That is the whole idea.
+
+| Without Bouncer | With Bouncer |
+| --- | --- |
+| The agent says it is done, and you find out it is not. | It cannot end the turn until `make verify` passes. |
+| You are the linter, reading every diff. | The linter's complaint lands in the agent's context on its own. |
+| "Please fix the lint errors", prompt after prompt. | It fixes them before you ever see the answer. |
+| Checks run when someone remembers to run them. | Checks run on every edit and every turn, whether anyone remembers or not. |
+| A green result you have to take on trust. | `make demo` and `make selftest` show it working on your own machine. |
 
 Here is the Stop hook refusing to let a turn end:
 
@@ -302,7 +321,9 @@ MIT. See [LICENSE](LICENSE).
 
 ## Español
 
-Tu agente te dice que ya terminó. Casi nunca es así.
+**Tu agente dice que terminó. Bouncer chequea los hechos.**
+
+Porque casi nunca es así.
 
 Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo, te
 vuelve a decir que terminó, y ahí se te fue la tarde. El problema no es que el
@@ -344,6 +365,14 @@ Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
 
 Un patovica no discute si estás en la lista. Estar muy convencido de que estás en
 la lista no te hace entrar. Esa es toda la idea.
+
+| Sin Bouncer | Con Bouncer |
+| --- | --- |
+| El agente dice que terminó y descubrís que no. | No puede terminar el turno hasta que `make verify` pase. |
+| Vos sos el linter, leyendo cada diff. | La queja del linter le cae sola en el contexto al agente. |
+| "Arreglá los errores de lint", prompt tras prompt. | Los arregla antes de que veas la respuesta. |
+| Los checks corren cuando alguien se acuerda de correrlos. | Corren en cada edición y en cada turno, se acuerde alguien o no. |
+| Un verde que te tenés que creer. | `make demo` y `make selftest` te lo muestran andando en tu máquina. |
 
 Así se ve el hook de Stop negándose a dejar terminar un turno:
 
