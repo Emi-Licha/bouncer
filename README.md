@@ -6,7 +6,7 @@
 
 **Your agent says it's done. Bouncer checks the facts.**
 
-Because it usually is not.
+Because it almost never is.
 
 So you read the diff, you find the unquoted variable, you prompt again, it tells
 you it is done again, and there goes your afternoon.
@@ -19,8 +19,9 @@ when the work counts as finished.
 
 **Bouncer closes the loop.** The agent acts, a check runs on its own, the
 failure goes straight back into the agent's context, and it corrects without
-being asked. It cannot end the turn until the check passes, or until three
-attempts in a row have failed, at which point Bouncer lets go and says so.
+being asked. It cannot end the turn, which means handing control back to you,
+until the check passes. If it fails three times in a row, Bouncer lets go and
+says so.
 
 What you get out of that is accuracy: whatever a check can catch gets caught,
 without depending on you to notice.
@@ -135,7 +136,7 @@ It is probably not for you if:
 ### The cast
 
 Six things, in plain language. If you already know what a linter and a hook are,
-skip to [Try it](#try-it-in-three-commands).
+skip to [Try it](#try-it).
 
 **The gate** is `make verify`. One command. It exits zero or it does not.
 Everything else in Bouncer exists either to run it at the right moment, or to
@@ -143,18 +144,18 @@ make its answer worth trusting.
 
 **A linter** is a program that reads code without running it and complains about
 what is wrong or risky. `shellcheck` reads a shell script and points out that
-`echo $name` breaks the first time a filename contains a space. There is one for
+`echo $name` breaks the first time `$name` holds a space. There is one for
 nearly every kind of file, and Bouncer wires up eleven: shell, YAML, Markdown,
 Dockerfiles, GitHub Actions workflows, Python, Terraform, Kubernetes manifests,
 Helm charts, Kyverno policies, and a scanner that hunts for leaked secrets.
 
 **A hook** is a command the agent's runtime runs by itself when something
 happens. You never call it. It fires. Claude Code offers several events; Bouncer
-uses two. `PostToolUse` fires right after a file is written, and lints just that
-file. `Stop` fires when the turn is about to end, and runs the gate. The runtime
-hands the hook some JSON on standard input, and then reads the hook's **exit
-code** to decide what happens next. That exit code is where all the leverage
-lives, and where nearly everyone gets it wrong:
+uses two. `PostToolUse` fires right after a file is edited or written, and lints
+just that file. `Stop` fires when the turn is about to end, and runs the gate.
+The runtime hands the hook some JSON on standard input, and then reads the
+hook's **exit code** to decide what happens next. That exit code is where all
+the leverage lives, and where nearly everyone gets it wrong:
 
 | The hook exits | What the runtime does |
 | --- | --- |
@@ -178,16 +179,16 @@ into a decision, which is exactly the point. It reports. It does not fix.
 And **`CLAUDE.md`** holds the rules your agent reads at the start of every
 session. Mostly one rule: fix the cause, never disable the check.
 
-### Try it in three commands
-
-In a clone of this repository:
+### Try it
 
 ```bash
+git clone https://github.com/emilianolicha-23/bouncer.git
+cd bouncer
 make bootstrap
 ```
 
-That installs the tools, and takes a few minutes the first time. The next two
-commands do not need Claude Code at all.
+`make bootstrap` installs the tools and takes a few minutes the first time. The
+next two commands do not need Claude Code at all.
 
 ```bash
 make demo
@@ -200,8 +201,9 @@ if anything is *not* rejected.
 make selftest
 ```
 
-Runs the whole gate over `examples/valid/`, which holds a real Terraform module,
-Helm chart, Kyverno policy and Kubernetes manifest, and has to pass.
+Runs the whole gate over `examples/valid/`, which holds real content (a
+Terraform module, a Helm chart, a Kyverno policy and a Kubernetes manifest), and
+has to pass.
 
 Between the two you have watched it reject what it should and accept what it
 should, on your own machine, in a few seconds. Nothing here asks to be taken on
@@ -222,10 +224,11 @@ ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
 Anything it lists already exists: do not copy over it. Merge it by hand, as
 described at the end of step 5.
 
-**2. Copy the files.** From a clone of this repository, shown here as
-`/path/to/bouncer`, standing in the root of your project:
+**2. Copy the files.** Clone Bouncer outside your project, shown here as
+`/path/to/bouncer`. Run all of this from the root of your project:
 
 ```bash
+git clone https://github.com/emilianolicha-23/bouncer.git /path/to/bouncer
 mkdir -p .claude scripts
 cp -R /path/to/bouncer/.claude/hooks /path/to/bouncer/.claude/agents .claude/
 cp /path/to/bouncer/.claude/settings.json .claude/
@@ -235,7 +238,8 @@ cp /path/to/bouncer/.yamllint.yml /path/to/bouncer/.markdownlint.yaml .
 ```
 
 If you also want `make demo` and `make selftest`, copy the fixtures they run
-against. Without them both commands refuse to run rather than pass on nothing.
+against. Without them, both commands refuse to run instead of passing without
+having tested anything.
 
 ```bash
 cp -R /path/to/bouncer/examples .
@@ -273,7 +277,7 @@ that file is the user's escape hatch.
 When something fails twice, stop and ask instead of trying a third variation.
 ```
 
-If step 1 found existing files, merge instead of copying:
+If step 1 found existing files, merge them instead of copying:
 
 - `.claude/settings.json`: copy the `hooks` block from Bouncer's into yours.
 - `Makefile`: copy the targets you want. `verify` is required, because it is the
@@ -360,8 +364,8 @@ lang = es
 
 The variable beats the file, so a team default and a personal preference never
 have to fight. `make lang` says which is active. A third language is one `case`
-block in `scripts/messages.sh`, and missing keys fall back to English, so a half
-finished translation still works.
+block in `scripts/messages.sh`, and missing keys fall back to English, so a
+half-finished translation still works.
 
 The documentation check for Terraform is opt-in twice over. It runs only when a
 `.terraform-docs.yml` sets an output file, and then only on modules whose
@@ -370,10 +374,10 @@ as a usage example, is left alone.
 
 ### Design notes
 
-**Missing content is skipped. A missing tool is not.** No `.tf` files means the
-Terraform checks are skipped, which is honest. But `.tf` files with no `tflint`
-installed is a hard failure, because otherwise the gate goes green for the worst
-possible reason: nothing is installed to catch anything.
+**Missing content is skipped. A missing tool is not.** If there are no `.tf`
+files, the Terraform checks are skipped, which is honest. But `.tf` files
+without `tflint` installed are a hard failure, because otherwise the gate goes
+green for the worst possible reason: nothing is installed to catch anything.
 
 **`kubeconform ok` does not mean every manifest was checked.**
 `-ignore-missing-schemas` is what lets a custom resource through, and it is also
@@ -434,8 +438,9 @@ At the command line:
 - Both languages across `verify`, `demo`, `doctor`, `bootstrap` and both hooks.
 - Installing into an empty project by following the install steps above to the
   letter: `make verify` green on clean content and red on a broken script, both
-  hooks exiting 2 when fed the same input Claude Code sends them, and `make
-  demo` and `make selftest` refusing to run until the fixtures were copied.
+  hooks exiting 2 when fed the same input Claude Code sends them, and
+  `make demo` and `make selftest` refusing to run until the fixtures were
+  copied.
 
 The checks against real content can be reproduced with `make demo` and
 `make selftest`, except the coverage floor: the Python stage looks for `src/`,
@@ -444,7 +449,7 @@ a subdirectory. Everything else was run by hand and is recorded here, not
 automated.
 
 Not run: the apt/dnf path in `bootstrap.sh`, which is written but never
-executed, and the three minute budget against a repository with real content.
+executed, and the three-minute budget against a repository with real content.
 Here `verify` takes about two seconds and `selftest` about four.
 
 ### Limits
@@ -485,9 +490,9 @@ estructura, un harness alrededor de tu agente. Los arreglos los sigue haciendo
 el modelo. El harness decide cuándo el trabajo cuenta como terminado.
 
 **Bouncer cierra el loop.** El agente actúa, un chequeo corre solo, la falla
-vuelve derecho a su contexto, y corrige sin que se lo pidas. Y no puede terminar
-el turno, o sea devolverte el control, hasta que el chequeo pase o hasta que
-falle tres veces seguidas, y ahí Bouncer lo suelta y lo avisa.
+vuelve derecho a su contexto, y corrige sin que se lo pidas. No puede terminar
+el turno, o sea devolverte el control, hasta que el chequeo pase. Si falla tres
+veces seguidas, Bouncer lo suelta y lo avisa.
 
 Lo que ganás con eso es precisión: lo que un chequeo puede atrapar queda
 atrapado, sin depender de que vos te des cuenta.
@@ -600,7 +605,7 @@ Probablemente no es para vos si:
 ### El elenco
 
 Seis cosas, en criollo. Si ya sabés qué es un linter y qué es un hook, saltá a
-[Probalo](#probalo-en-tres-comandos).
+[Probalo](#probalo).
 
 **El gate** es `make verify`. Un comando. Sale con cero o no sale con cero. Todo
 lo demás en Bouncer existe para correrlo en el momento justo, o para que su
@@ -608,20 +613,20 @@ respuesta valga algo.
 
 **Un linter** es un programa que lee código sin ejecutarlo y se queja de lo que
 está mal o es riesgoso. `shellcheck` lee un script de shell y te marca que
-`echo $nombre` se rompe la primera vez que un archivo tenga un espacio en el
-nombre. Hay uno para casi cada tipo de archivo, y Bouncer conecta once: shell,
-YAML, Markdown, Dockerfiles, workflows de GitHub Actions, Python, Terraform,
-manifiestos de Kubernetes, charts de Helm, policies de Kyverno, y un escáner que
-busca secretos filtrados.
+`echo $name` se rompe la primera vez que `$name` tenga un espacio. Hay uno para
+casi cada tipo de archivo, y Bouncer conecta once: shell, YAML, Markdown,
+Dockerfiles, workflows de GitHub Actions, Python, Terraform, manifiestos de
+Kubernetes, charts de Helm, policies de Kyverno, y un escáner que busca secretos
+filtrados.
 
 **Un hook** es un comando que el runtime del agente corre por su cuenta cuando
 pasa algo. Vos nunca lo llamás. Se dispara. Claude Code ofrece varios eventos;
-Bouncer usa dos. `PostToolUse` se dispara justo después de que se escribe un
-archivo, y lintea solo ese archivo. `Stop` se dispara cuando el turno está por
-terminar, y corre el gate. El runtime le pasa al hook un JSON por entrada
-estándar, y después lee el **código de salida** del hook para decidir qué hacer.
-Ese código de salida es donde está toda la palanca, y donde casi todo el mundo
-se equivoca:
+Bouncer usa dos. `PostToolUse` se dispara justo después de que se edita o se
+escribe un archivo, y lintea solo ese archivo. `Stop` se dispara cuando el turno
+está por terminar, y corre el gate. El runtime le pasa al hook un JSON por
+entrada estándar, y después lee el **código de salida** del hook para decidir
+qué hacer. Ese código de salida es donde está toda la palanca, y donde casi todo
+el mundo se equivoca:
 
 | El hook sale con | Qué hace el runtime |
 | --- | --- |
@@ -646,16 +651,16 @@ de una decisión, que es exactamente el punto. Reporta. No arregla.
 Y **`CLAUDE.md`** tiene las reglas que tu agente lee al empezar cada sesión.
 Básicamente una: arreglá la causa, nunca deshabilites el check.
 
-### Probalo en tres comandos
-
-En un clon de este repositorio:
+### Probalo
 
 ```bash
+git clone https://github.com/emilianolicha-23/bouncer.git
+cd bouncer
 make bootstrap
 ```
 
-Eso instala las herramientas, y la primera vez tarda unos minutos. Los dos
-comandos que siguen no necesitan Claude Code para nada.
+`make bootstrap` instala las herramientas y la primera vez tarda unos minutos.
+Los dos comandos que siguen no necesitan Claude Code para nada.
 
 ```bash
 make demo
@@ -668,9 +673,9 @@ si algo *no* es rechazado.
 make selftest
 ```
 
-Corre el gate entero sobre `examples/valid/`, que tiene un módulo de Terraform,
-un chart de Helm, una policy de Kyverno y un manifiesto de Kubernetes de verdad,
-y tiene que pasar.
+Corre el gate entero sobre `examples/valid/`, que tiene contenido de verdad (un
+módulo de Terraform, un chart de Helm, una policy de Kyverno y un manifiesto de
+Kubernetes), y tiene que pasar.
 
 Entre los dos ya lo viste rechazar lo que debe y aceptar lo que debe, en tu
 propia máquina, en pocos segundos. Acá no hay nada que tengas que creer. Ver a
@@ -689,13 +694,14 @@ instalarlo es copiarlos.
 ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
 ```
 
-Lo que liste ya existe: no lo sobreescribas. Mergealo a mano, como se explica al
+Lo que liste ya existe: no lo sobrescribas. Combinalo a mano, como se explica al
 final del paso 5.
 
-**2. Copiá los archivos.** Desde un clon de este repositorio, que abajo aparece
-como `/ruta/a/bouncer`, parado en la raíz de tu proyecto:
+**2. Copiá los archivos.** Cloná Bouncer fuera de tu proyecto, que abajo aparece
+como `/ruta/a/bouncer`. Corré todo esto desde la raíz de tu proyecto:
 
 ```bash
+git clone https://github.com/emilianolicha-23/bouncer.git /ruta/a/bouncer
 mkdir -p .claude scripts
 cp -R /ruta/a/bouncer/.claude/hooks /ruta/a/bouncer/.claude/agents .claude/
 cp /ruta/a/bouncer/.claude/settings.json .claude/
@@ -744,7 +750,7 @@ that file is the user's escape hatch.
 When something fails twice, stop and ask instead of trying a third variation.
 ```
 
-Si en el paso 1 encontraste archivos existentes, mergealos en vez de copiar:
+Si en el paso 1 encontraste archivos existentes, combinalos en vez de copiarlos:
 
 - `.claude/settings.json`: copiá el bloque `hooks` del de Bouncer al tuyo.
 - `Makefile`: copiá los targets que quieras. `verify` es obligatorio, porque es
@@ -842,9 +848,9 @@ directorio sin él, como un ejemplo de uso, queda afuera.
 
 ### Decisiones de diseño
 
-**El contenido que falta se saltea. Una herramienta que falta, no.** Que no haya
-archivos `.tf` significa saltear los checks de Terraform, y eso es honesto. Pero
-que haya `.tf` sin `tflint` instalado es fallo duro, porque si no el gate se
+**El contenido que falta se saltea. Una herramienta que falta, no.** Si no hay
+archivos `.tf`, los checks de Terraform se saltean, y eso es honesto. Pero tener
+archivos `.tf` sin `tflint` instalado es un fallo duro, porque si no el gate se
 pone verde por el peor motivo posible: no hay nada instalado que pueda atrapar
 nada.
 
@@ -902,8 +908,8 @@ En la línea de comandos:
   aceptando 100%.
 - `make verify-full` contra kind sobre colima. Un ConfigMap llamado
   `Nombre_Invalido` es `Valid: 1` para kubeconform, cuyo schema no restringe el
-  formato del nombre, y el API server lo rechaza por no ser un subdominio RFC
-  1123. Esa brecha es por lo que la etapa e2e existe aparte.
+  formato del nombre, y el API server lo rechaza por no ser un subdominio
+  RFC 1123. Esa brecha es por lo que la etapa e2e existe aparte.
 - Nombres con espacio, comilla o salto de línea, tanto en archivos como en
   directorios.
 - `bootstrap` en sus tres ramas y el código de salida de cada una, dos de ellas
