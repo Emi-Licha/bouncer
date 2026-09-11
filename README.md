@@ -17,11 +17,13 @@ between the agent saying "done" and you reading it. Bouncer is that structure, a
 harness around your agent. The model still makes every fix. The harness decides
 when the work counts as finished.
 
-**Bouncer closes the loop.** The agent acts, a check runs on its own, the failure
-goes straight back into the agent's context, and it corrects without being asked.
-It cannot end the turn until the check passes.
+**Bouncer closes the loop.** The agent acts, a check runs on its own, the
+failure goes straight back into the agent's context, and it corrects without
+being asked. It cannot end the turn until the check passes, or until three
+attempts in a row have failed, at which point Bouncer lets go and says so.
 
-What you get out of that is accuracy that does not depend on you noticing.
+What you get out of that is accuracy: whatever a check can catch gets caught,
+without depending on you to notice.
 
 ```text
   you: "add the retry logic"
@@ -31,7 +33,7 @@ What you get out of that is accuracy that does not depend on you noticing.
 │   agent edits a file                                                   │
 │         │                                                              │
 │         ▼                                                              │
-│   PostToolUse hook  ──▶  lints that one file, under 2s                 │
+│   PostToolUse hook  ──▶  lints that one file, in under 2 seconds       │
 │         │                exit 2 drops the complaint straight           │
 │         │                into the agent's context                      │
 │         ▼                                                              │
@@ -48,7 +50,7 @@ What you get out of that is accuracy that does not depend on you noticing.
         │
         │  make verify passed
         ▼
-  an answer you did not have to check
+  an answer that already passed the gate
 ```
 
 A bouncer does not argue about whether you are on the list. Being extremely
@@ -56,10 +58,10 @@ confident that you are on the list does not get you in. That is the whole idea.
 
 | Without Bouncer | With Bouncer |
 | --- | --- |
-| The agent says it is done, and you find out it is not. | It cannot end the turn until `make verify` passes. |
+| The agent says it is done, and you find out it is not. | It cannot end the turn until `make verify` passes, or until three tries fail and it says so. |
 | You are the linter, reading every diff. | The linter's complaint lands in the agent's context on its own. |
 | "Please fix the lint errors", prompt after prompt. | It fixes them before you ever see the answer. |
-| Checks run when someone remembers to run them. | Checks run on every edit and every turn, whether anyone remembers or not. |
+| Checks run when someone remembers to run them. | Checks run as the agent writes files, and again before every turn ends. |
 | A green result you have to take on trust. | `make demo` and `make selftest` show it working on your own machine. |
 
 Here is the Stop hook refusing to let a turn end:
@@ -68,18 +70,24 @@ Here is the Stop hook refusing to let a turn end:
 === make verify FAILED (attempt 1/3): the turn cannot end ===
 == static (pre-commit) ==
   pre-commit                   FAIL
-      yamllint.......................................................Failed
+      yamllint.................................................................Failed
+      - hook id: yamllint
+      - exit code: 1
+
       config.yaml
-        2:4  error  syntax error: mapping values are not allowed here
+        2:4       error    syntax error: mapping values are not allowed here (syntax)
 ```
 
 And the PostToolUse hook handing back a complaint nobody asked for:
 
 ```text
 PostToolUse:Edit hook returned blocking error
-LINT FAILED: demo.sh
-  echo $undefined_target
-       ^-------------^ SC2154: undefined_target is referenced but not assigned.
+[${CLAUDE_PROJECT_DIR}/.claude/hooks/lint-changed.sh]: LINT FAILED: /path/to/demo.sh
+
+In /path/to/demo.sh line 2:
+echo $undefined_target
+     ^---------------^ SC2154 (warning): undefined_target is referenced but not assigned.
+     ^---------------^ SC2086 (info): Double quote to prevent globbing and word splitting.
 ```
 
 ### What Bouncer is
@@ -87,14 +95,14 @@ LINT FAILED: demo.sh
 **It is a harness, and its shape is a loop.** A harness is the structure you put
 around an agent, not the agent itself. It does not make the model smarter and it
 does not rewrite your prompts. It changes what the model is allowed to call
-finished. The shape is a closed loop: act, check, feed the failure back, correct,
-repeat until it passes. The distinctive part is not what gets checked. It is who
-decides, and that moves from the agent to a command that does not negotiate.
+finished. The shape is a closed loop: act, check, feed the failure back,
+correct, repeat until it passes. The distinctive part is not what gets checked.
+It is who decides, and that moves from the agent to a command that does not
+negotiate.
 
-It is not a library you import, a service you run, a pipeline or a graph, and it
-is not prompt engineering. There is no orchestration anywhere in it: two events
-and one command, sitting in your repository, changing what your agent is allowed
-to do.
+It is not a library you import, a service you run, a pipeline or a graph. There
+is no orchestration anywhere in it: two events and one command, sitting in your
+repository, changing what your agent is allowed to do.
 
 ### Who it is for
 
@@ -105,7 +113,7 @@ to do.
   Helm charts, Kyverno policies: places where a plausible-looking mistake costs
   more than a failed build. That is the stack Bouncer checks out of the box.
 - **Your team wants one Definition of Done for AI-assisted changes.** The same
-  gate runs for every person and every agent, and the same checks run again at
+  gate runs for every person and every agent, and its static checks run again at
   `git commit`.
 - **You review what an agent produced.** The diff reaches you already linted and
   validated, so review time goes on design instead of unquoted variables.
@@ -116,16 +124,17 @@ to do.
 It is probably not for you if:
 
 - **Your agent is not Claude Code.** The loop depends on Claude Code hooks.
-  `make verify` and `pre-commit` still work anywhere, but nothing stops the turn.
+  `make verify` and `pre-commit` still work without it, but nothing stops the
+  turn.
 - **Your stack is JavaScript, Go, Java or Rust.** No linters for those are wired
-  in yet. Adding one is an entry in `.pre-commit-config.yaml`, but out of the box
-  Bouncer would skip your code.
+  in yet. Adding one is an entry in `.pre-commit-config.yaml`, but out of the
+  box Bouncer would skip your code.
 - **You need it on Windows**, or you want it to replace CI. It is tested on
   macOS, and it runs on your machine, not on a server.
 
 ### The cast
 
-Five things, in plain language. If you already know what a linter and a hook are,
+Six things, in plain language. If you already know what a linter and a hook are,
 skip to [Try it](#try-it-in-three-commands).
 
 **The gate** is `make verify`. One command. It exits zero or it does not.
@@ -162,8 +171,8 @@ files. Bouncer uses it as the single place the fast checks are defined, so
 Those linters are declared `repo: local`, meaning they call the same binaries
 `make bootstrap` installed, so they cannot quietly drift to a different version.
 
-**The reviewer** is a second agent that reads the finished diff with no memory of
-the conversation that produced it. It cannot see how anyone talked themselves
+**The reviewer** is a second agent that reads the finished diff with no memory
+of the conversation that produced it. It cannot see how anyone talked themselves
 into a decision, which is exactly the point. It reports. It does not fix.
 
 And **`CLAUDE.md`** holds the rules your agent reads at the start of every
@@ -171,12 +180,14 @@ session. Mostly one rule: fix the cause, never disable the check.
 
 ### Try it in three commands
 
+In a clone of this repository:
+
 ```bash
 make bootstrap
 ```
 
-Then restart your Claude Code session. That step is not optional, and
-[the trap](#the-trap) explains why.
+That installs the tools, and takes a few minutes the first time. The next two
+commands do not need Claude Code at all.
 
 ```bash
 make demo
@@ -193,8 +204,9 @@ Runs the whole gate over `examples/valid/`, which holds a real Terraform module,
 Helm chart, Kyverno policy and Kubernetes manifest, and has to pass.
 
 Between the two you have watched it reject what it should and accept what it
-should, on your own machine, in about ten seconds. Nothing here asks to be taken
-on faith.
+should, on your own machine, in a few seconds. Nothing here asks to be taken on
+faith. Watching the hooks stop an agent is the next step, and that needs a
+restarted session: [the trap](#the-trap) explains why.
 
 ### Install it in your own project
 
@@ -204,10 +216,10 @@ copy it into your project. It is a handful of files, so installing is copying.
 **1. Check for files you would overwrite.**
 
 ```bash
-ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md
+ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
 ```
 
-If any of those already exist, do not copy over them. Merge them by hand, as
+Anything it lists already exists: do not copy over it. Merge it by hand, as
 described at the end of step 5.
 
 **2. Copy the files.** From a clone of this repository, shown here as
@@ -235,16 +247,18 @@ cp -R /path/to/bouncer/examples .
 printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n' >> .gitignore
 ```
 
-**4. Install the tools and the git hook, then track the new files.** `pre-commit`
-only checks files git is tracking.
+**4. Install the tools and the git hook, then track the new files.**
+`pre-commit` only checks files git is tracking.
 
 ```bash
 make bootstrap
 git add .claude scripts Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml .gitignore
 ```
 
-**5. Tell your agent the rules.** Add this to your `CLAUDE.md`, creating it if it
-does not exist:
+If you copied `examples/`, track it too with `git add examples`.
+
+**5. Tell your agent the rules.** Add this to your `CLAUDE.md`, creating it if
+it does not exist:
 
 ```markdown
 ## Definition of Done
@@ -283,21 +297,31 @@ anything is a gate you do not have.
 | `make selftest` | Proves the gate still accepts good things. |
 | `make doctor` | Which tools you have and which you are missing. |
 | `make bootstrap` | Installs them. |
+| `make lang` | Which language Bouncer is speaking. |
+| `make clean` | Removes scratch and cache directories. |
+
+Run `make` with no target to list them all.
 
 Bouncer works out what your repository actually contains and runs only what
 applies. Add Terraform next month and nothing here needs editing.
 
-Seven files, and none of them is clever:
+The pieces, and none of them is clever:
 
 | Path | What it is |
 | --- | --- |
 | `Makefile` | The commands above. |
 | `scripts/verify.sh` | The engine. It lives here because macOS ships GNU Make 3.81, which has no `.ONESHELL`. |
-| `scripts/messages.sh` | Every string it prints, in English and Spanish. |
-| `.claude/hooks/` | The two hooks. |
+| `scripts/messages.sh` | Every string Bouncer prints, in English and Spanish. |
+| `scripts/bootstrap.sh` | Installs the tools. |
+| `scripts/demo.sh` | Runs the linters over `examples/broken/`. |
+| `.claude/settings.json` | Registers the two hooks. |
+| `.claude/hooks/` | The two hooks: `lint-changed.sh` and `verify-on-stop.sh`. |
 | `.claude/agents/reviewer.md` | The reviewer's instructions and its tool permissions. |
 | `.pre-commit-config.yaml` | The single definition of every fast static check. |
-| `CLAUDE.md` | The rules. |
+| `.yamllint.yml`, `.markdownlint.yaml` | Settings for those two linters. |
+| `.terraform-docs.yml` | Turns on the documentation check for Terraform modules. |
+| `examples/` | The fixtures for `make demo` and `make selftest`. |
+| `CLAUDE.md` | The rules your agent reads. |
 
 ### The trap
 
@@ -339,6 +363,11 @@ have to fight. `make lang` says which is active. A third language is one `case`
 block in `scripts/messages.sh`, and missing keys fall back to English, so a half
 finished translation still works.
 
+The documentation check for Terraform is opt-in twice over. It runs only when a
+`.terraform-docs.yml` sets an output file, and then only on modules whose
+`README.md` carries the `BEGIN_TF_DOCS` marker, so a directory without it, such
+as a usage example, is left alone.
+
 ### Design notes
 
 **Missing content is skipped. A missing tool is not.** No `.tf` files means the
@@ -352,11 +381,11 @@ how a run reports success having validated a fraction of what it read. The stage
 prints the skipped count, so a green line is not mistaken for more coverage than
 it is.
 
-**The coverage floor is 85%, and only for `src/` layouts.** A bare `--cov` counts
-the test files, which are close to fully covered by definition and drag the total
-over the line: 75% source plus 100% tests reports 89%. Without a `src/` to scope
-to, the floor is dropped out loud, because a threshold that goes green for the
-wrong reason is worse than no threshold.
+**The coverage floor is 85%, and only for `src/` layouts.** A bare `--cov`
+counts the test files, which are close to fully covered by definition and drag
+the total over the line: 75% source plus 100% tests reports 89%. Without a
+`src/` to scope to, the floor is dropped out loud, because a threshold that goes
+green for the wrong reason is worse than no threshold.
 
 **Untracked files warn, they do not fail.** `pre-commit` only sees files git is
 tracking, so a brand new file skips the static pass entirely. Failing on that
@@ -371,54 +400,67 @@ gate stays open for the rest of the session.
 are withheld from it. It keeps `Bash`, because a reviewer that cannot check
 whether a binary exists inflates severities over guesses, and `Bash` can write
 files. The last step of that prohibition is a rule in its prompt rather than a
-wall, and you should know that before pointing it at a repository you care about.
+wall, and you should know that before pointing it at a repository you care
+about.
 
 ### What has actually been run
 
 A repository about verification should say what was tested rather than ask to be
-believed. All of this was run on macOS, end to end, against the real runtime:
+believed. All of this was run on macOS.
+
+Against a live Claude Code session:
 
 - Both hooks registered, and which settings file they came from.
 - `PostToolUse` returning a lint error into the agent's context.
 - `Stop` blocking a turn, the three-strike release, and the counter resetting.
-- `.claude/.skip-verify` closing a turn with the gate still red.
+- `.claude/.skip-verify` letting a turn end with the gate still red.
+- The reviewer following the configured language both ways: asked in Spanish
+  with the English default it answered in English, and set to Spanish it
+  answered in Spanish.
+
+At the command line:
+
 - Real content: `kubeconform` accepting a good manifest and rejecting a bad one,
   `helm template` on a chart, `kyverno test` both ways, `terraform validate`,
-  `tflint`, `trivy`, `terraform-docs` on a current and on a stale module, and the
-  coverage floor rejecting 75% while accepting 100%.
+  `tflint`, `trivy`, `terraform-docs` on a current and on a stale module, and
+  the coverage floor rejecting 75% while accepting 100%.
 - `make verify-full` against kind on colima. A ConfigMap named `Nombre_Invalido`
   is `Valid: 1` to kubeconform, whose schema does not constrain name format, and
   the API server rejects it for not being an RFC 1123 subdomain. That gap is why
   the e2e stage exists separately.
 - Names holding a space, a quote or a newline, in files and directories alike.
-- `bootstrap` on all three of its branches, and the exit code each returns.
-- Both languages everywhere, the reviewer included: asked in Spanish with the
-  English default in place, it answered in English.
-- Installing into an empty project by following the install steps above to
-  the letter: `make verify` green on clean content and red on a broken script,
-  both hooks exiting 2, and `make demo` and `make selftest` refusing to run when
-  the fixtures were not copied.
+- `bootstrap` on all three of its branches and the exit code each returns, two
+  of them with a stand-in package manager so nothing was installed.
+- Both languages across `verify`, `demo`, `doctor`, `bootstrap` and both hooks.
+- Installing into an empty project by following the install steps above to the
+  letter: `make verify` green on clean content and red on a broken script, both
+  hooks exiting 2 when fed the same input Claude Code sends them, and `make
+  demo` and `make selftest` refusing to run until the fixtures were copied.
 
-Everything except the coverage floor is reproducible with `make demo` and
-`make selftest`. The floor is the exception, because the Python stage looks for
-`src/`, `tests/` and `pyproject.toml` at the repository root and cannot see a
-fixture in a subdirectory.
+The checks against real content can be reproduced with `make demo` and
+`make selftest`, except the coverage floor: the Python stage looks for `src/`,
+`tests/` and `pyproject.toml` at the repository root and cannot see a fixture in
+a subdirectory. Everything else was run by hand and is recorded here, not
+automated.
 
-Not run: the apt/dnf path in `bootstrap.sh`, which is written but never executed,
-and the three minute budget against a repository with real content. Here `verify`
-takes about two seconds and `selftest` about six.
+Not run: the apt/dnf path in `bootstrap.sh`, which is written but never
+executed, and the three minute budget against a repository with real content.
+Here `verify` takes about two seconds and `selftest` about four.
 
 ### Limits
 
-`terraform init` and the first `kubeconform` run need the network, though never
-cloud credentials.
+Parts of the gate need the network, though never cloud credentials: `pre-commit`
+downloads its hook environments on first run, `kubeconform` fetches schemas it
+has not cached, `trivy` fetches its checks bundle, and `terraform init` fetches
+any providers a module declares.
 
-The reviewer is a language model, not a linter. Early on it was close to useless:
-ten findings across three runs, three of them real, and twice a suggested fix
-that would have been worse than the bug. Tightening its rules, so that it checks
-what it can check and never prescribes a remedy it has not run, changed that. It
-now costs about five and a half minutes on a ninety-line diff, most of that spent
-verifying its own claims. `maxTurns` bounds it if that is too slow. Reproduce a
+The reviewer is a language model, not a linter. Its first two reviews produced
+seven findings, two of them real, and both times the fix it suggested would have
+been worse than the bug. Tightening its rules, so that it checks what it can
+check and never prescribes a remedy it has not run, changed that: its two most
+recent reviews produced seven findings, six of them real. The price is time,
+about five and a half minutes on a ninety-line diff, most of it spent verifying
+its own claims. `maxTurns` in its frontmatter caps how long it runs. Reproduce a
 finding before acting on it, either way.
 
 ### License
@@ -433,20 +475,22 @@ MIT. See [LICENSE](LICENSE).
 
 Porque casi nunca lo está.
 
-Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo, te
-vuelve a decir que está listo, y ahí se te fue la tarde.
+Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo,
+te vuelve a decir que está listo, y ahí se te fue la tarde.
 
 Esto no es un problema de prompts, y promptear mejor no lo arregla. Tampoco es
-que el modelo sea descuidado. Lo que falta es estructura: nada chequea el trabajo
-entre que el agente dice "listo" y vos lo leés. Bouncer es esa estructura, un
-harness alrededor de tu agente. Los arreglos los sigue haciendo el modelo. El
-harness decide cuándo el trabajo cuenta como terminado.
+que el modelo sea descuidado. Lo que falta es estructura: nada chequea el
+trabajo entre que el agente dice "listo" y vos lo leés. Bouncer es esa
+estructura, un harness alrededor de tu agente. Los arreglos los sigue haciendo
+el modelo. El harness decide cuándo el trabajo cuenta como terminado.
 
 **Bouncer cierra el loop.** El agente actúa, un chequeo corre solo, la falla
 vuelve derecho a su contexto, y corrige sin que se lo pidas. Y no puede terminar
-el turno, o sea devolverte el control, hasta que el chequeo pase.
+el turno, o sea devolverte el control, hasta que el chequeo pase o hasta que
+falle tres veces seguidas, y ahí Bouncer lo suelta y lo avisa.
 
-Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
+Lo que ganás con eso es precisión: lo que un chequeo puede atrapar queda
+atrapado, sin depender de que vos te des cuenta.
 
 ```text
   vos: "agregá la lógica de reintento"
@@ -456,16 +500,16 @@ Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
 │   el agente edita un archivo                                           │
 │         │                                                              │
 │         ▼                                                              │
-│   hook PostToolUse  ──▶  lintea ese archivo, en menos de 2s            │
-│         │                 exit 2 le mete la queja derecho              │
-│         │                 en el contexto al agente                     │
+│   hook de PostToolUse  ──▶  lintea ese archivo, en menos de 2 segundos │
+│         │                   exit 2 le mete la queja derecho            │
+│         │                   en el contexto al agente                   │
 │         ▼                                                              │
 │   lo arregla solo, y recién ahí intenta terminar el turno              │
 │         │                                                              │
 │         ▼                                                              │
-│   hook Stop         ──▶  corre `make verify`, el gate entero           │
-│         │                 exit 2 le frena el turno y le                │
-│         │                 devuelve la falla como motivo                │
+│   hook de Stop         ──▶  corre `make verify`, el gate entero        │
+│         │                   exit 2 le frena el turno y le              │
+│         │                   devuelve la falla como motivo              │
 │         │                                      │                       │
 │         │   ◀──────────────────────────────────┘  otra vuelta          │
 │         │       (tres vueltas, después se rinde y lo dice)             │
@@ -473,18 +517,18 @@ Lo que ganás con eso es precisión que no depende de que vos te des cuenta.
         │
         │  make verify pasó
         ▼
-  una respuesta que no tuviste que revisar
+  una respuesta que ya pasó el gate
 ```
 
-Un patovica no discute si estás en la lista. Estar muy convencido de que estás en
-la lista no te hace entrar. Esa es toda la idea.
+Un patovica no discute si estás en la lista. Estar muy convencido de que estás
+en la lista no te hace entrar. Esa es toda la idea.
 
 | Sin Bouncer | Con Bouncer |
 | --- | --- |
-| El agente dice que está listo y descubrís que no. | No puede terminar el turno hasta que `make verify` pase. |
+| El agente dice que está listo y descubrís que no. | No puede terminar el turno hasta que `make verify` pase, o hasta que falle tres veces y lo avise. |
 | Vos sos el linter, leyendo cada diff. | La queja del linter le cae sola en el contexto al agente. |
 | "Arreglá los errores de lint", prompt tras prompt. | Los arregla antes de que veas la respuesta. |
-| Los checks corren cuando alguien se acuerda de correrlos. | Corren en cada edición y en cada turno, se acuerde alguien o no. |
+| Los checks corren cuando alguien se acuerda de correrlos. | Corren a medida que el agente escribe archivos, y otra vez antes de que termine cada turno. |
 | Un verde que te tenés que creer. | `make demo` y `make selftest` te lo muestran andando en tu máquina. |
 
 Así se ve el hook de Stop negándose a dejar terminar un turno:
@@ -493,18 +537,24 @@ Así se ve el hook de Stop negándose a dejar terminar un turno:
 === make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
 == static (pre-commit) ==
   pre-commit                   FAIL
-      yamllint.......................................................Failed
+      yamllint.................................................................Failed
+      - hook id: yamllint
+      - exit code: 1
+
       config.yaml
-        2:4  error  syntax error: mapping values are not allowed here
+        2:4       error    syntax error: mapping values are not allowed here (syntax)
 ```
 
 Y el hook de PostToolUse devolviendo una queja que nadie pidió:
 
 ```text
 PostToolUse:Edit hook returned blocking error
-LINT FALLÓ: demo.sh
-  echo $undefined_target
-       ^-------------^ SC2154: undefined_target is referenced but not assigned.
+[${CLAUDE_PROJECT_DIR}/.claude/hooks/lint-changed.sh]: LINT FALLÓ: /path/to/demo.sh
+
+In /path/to/demo.sh line 2:
+echo $undefined_target
+     ^---------------^ SC2154 (warning): undefined_target is referenced but not assigned.
+     ^---------------^ SC2086 (info): Double quote to prevent globbing and word splitting.
 ```
 
 ### Qué es Bouncer
@@ -516,10 +566,9 @@ terminado. La forma es un loop cerrado: actuar, chequear, devolver la falla,
 corregir, repetir hasta que pase. Lo distintivo no es qué se chequea. Es quién
 decide, y eso pasa del agente a un comando que no negocia.
 
-No es una librería que importás, ni un servicio que corrés, ni un pipeline, ni un
-graph, y tampoco es ingeniería de prompts. No hay orquestación en ningún lado: dos
-eventos y un comando, viviendo en tu repo, cambiando lo que tu agente tiene
-permitido hacer.
+No es una librería que importás, ni un servicio que corrés, ni un pipeline, ni
+un graph. No hay orquestación en ningún lado: dos eventos y un comando, viviendo
+en tu repo, cambiando lo que tu agente tiene permitido hacer.
 
 ### A quién le sirve
 
@@ -530,8 +579,8 @@ permitido hacer.
   parece razonable sale más caro que un build roto. Es el stack que Bouncer
   chequea de fábrica.
 - **Tu equipo quiere una sola definición de terminado para cambios hechos con
-  IA.** El mismo gate corre para cada persona y cada agente, y los mismos checks
-  vuelven a correr en el `git commit`.
+  IA.** El mismo gate corre para cada persona y cada agente, y sus checks
+  estáticos vuelven a correr en el `git commit`.
 - **Revisás lo que produce un agente.** El diff te llega ya linteado y validado,
   así que el tiempo de review se va en diseño y no en variables sin comillas.
 - **Estás armando tu propio harness.** La semántica de los exit codes, las
@@ -541,7 +590,7 @@ permitido hacer.
 Probablemente no es para vos si:
 
 - **Tu agente no es Claude Code.** El loop depende de los hooks de Claude Code.
-  `make verify` y `pre-commit` andan en cualquier lado, pero nada frena el turno.
+  `make verify` y `pre-commit` andan igual sin él, pero nada frena el turno.
 - **Tu stack es JavaScript, Go, Java o Rust.** Todavía no hay linters conectados
   para esos. Agregar uno es una entrada en `.pre-commit-config.yaml`, pero tal
   como viene Bouncer se saltearía tu código.
@@ -550,7 +599,7 @@ Probablemente no es para vos si:
 
 ### El elenco
 
-Cinco cosas, en criollo. Si ya sabés qué es un linter y qué es un hook, saltá a
+Seis cosas, en criollo. Si ya sabés qué es un linter y qué es un hook, saltá a
 [Probalo](#probalo-en-tres-comandos).
 
 **El gate** es `make verify`. Un comando. Sale con cero o no sale con cero. Todo
@@ -569,9 +618,10 @@ busca secretos filtrados.
 pasa algo. Vos nunca lo llamás. Se dispara. Claude Code ofrece varios eventos;
 Bouncer usa dos. `PostToolUse` se dispara justo después de que se escribe un
 archivo, y lintea solo ese archivo. `Stop` se dispara cuando el turno está por
-terminar, y corre el gate. El runtime le pasa al hook un JSON por entrada estándar,
-y después lee el **código de salida** del hook para decidir qué hacer. Ese código
-de salida es donde está toda la palanca, y donde casi todo el mundo se equivoca:
+terminar, y corre el gate. El runtime le pasa al hook un JSON por entrada
+estándar, y después lee el **código de salida** del hook para decidir qué hacer.
+Ese código de salida es donde está toda la palanca, y donde casi todo el mundo
+se equivoca:
 
 | El hook sale con | Qué hace el runtime |
 | --- | --- |
@@ -590,20 +640,22 @@ desacuerdo sobre qué significa "limpio". Esos linters están declarados como
 `make bootstrap`, así que no pueden derivar en silencio a otra versión.
 
 **El reviewer** es un segundo agente que lee el diff terminado sin memoria de la
-conversación que lo produjo. No puede ver cómo alguien se convenció a sí mismo de
-una decisión, que es exactamente el punto. Reporta. No arregla.
+conversación que lo produjo. No puede ver cómo alguien se convenció a sí mismo
+de una decisión, que es exactamente el punto. Reporta. No arregla.
 
 Y **`CLAUDE.md`** tiene las reglas que tu agente lee al empezar cada sesión.
 Básicamente una: arreglá la causa, nunca deshabilites el check.
 
 ### Probalo en tres comandos
 
+En un clon de este repositorio:
+
 ```bash
 make bootstrap
 ```
 
-Después reiniciá tu sesión de Claude Code. Ese paso no es opcional, y
-[la trampa](#la-trampa) explica por qué.
+Eso instala las herramientas, y la primera vez tarda unos minutos. Los dos
+comandos que siguen no necesitan Claude Code para nada.
 
 ```bash
 make demo
@@ -621,7 +673,9 @@ un chart de Helm, una policy de Kyverno y un manifiesto de Kubernetes de verdad,
 y tiene que pasar.
 
 Entre los dos ya lo viste rechazar lo que debe y aceptar lo que debe, en tu
-propia máquina, en unos diez segundos. Acá no hay nada que tengas que creer.
+propia máquina, en pocos segundos. Acá no hay nada que tengas que creer. Ver a
+los hooks frenar a un agente es el paso siguiente, y eso necesita una sesión
+reiniciada: [la trampa](#la-trampa) explica por qué.
 
 ### Instalalo en tu proyecto
 
@@ -632,10 +686,10 @@ instalarlo es copiarlos.
 **1. Fijate si vas a pisar algún archivo.**
 
 ```bash
-ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md
+ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
 ```
 
-Si alguno ya existe, no lo sobreescribas. Mergealo a mano, como se explica al
+Lo que liste ya existe: no lo sobreescribas. Mergealo a mano, como se explica al
 final del paso 5.
 
 **2. Copiá los archivos.** Desde un clon de este repositorio, que abajo aparece
@@ -650,9 +704,9 @@ cp /ruta/a/bouncer/Makefile /ruta/a/bouncer/.pre-commit-config.yaml .
 cp /ruta/a/bouncer/.yamllint.yml /ruta/a/bouncer/.markdownlint.yaml .
 ```
 
-Si además querés `make demo` y `make selftest`, copiá los fixtures contra los que
-corren. Sin ellos, los dos comandos se niegan a correr en vez de pasar sin haber
-probado nada.
+Si además querés `make demo` y `make selftest`, copiá los fixtures contra los
+que corren. Sin ellos, los dos comandos se niegan a correr en vez de pasar sin
+haber probado nada.
 
 ```bash
 cp -R /ruta/a/bouncer/examples .
@@ -671,6 +725,8 @@ printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n' >> .g
 make bootstrap
 git add .claude scripts Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml .gitignore
 ```
+
+Si copiaste `examples/`, trackealo también con `git add examples`.
 
 **5. Contale las reglas a tu agente.** Agregá esto a tu `CLAUDE.md`, y crealo si
 no existe:
@@ -693,7 +749,8 @@ Si en el paso 1 encontraste archivos existentes, mergealos en vez de copiar:
 - `.claude/settings.json`: copiá el bloque `hooks` del de Bouncer al tuyo.
 - `Makefile`: copiá los targets que quieras. `verify` es obligatorio, porque es
   el que llama el hook de Stop.
-- `.pre-commit-config.yaml`: sumá las entradas de `repos` de Bouncer a las tuyas.
+- `.pre-commit-config.yaml`: sumá las entradas de `repos` de Bouncer a las
+  tuyas.
 - `CLAUDE.md`: agregá el bloque de arriba al final.
 
 **6. Reiniciá Claude Code y comprobá que el gate está vivo.** Los hooks se leen
@@ -712,21 +769,31 @@ que nunca viste bloquear nada es un gate que no tenés.
 | `make selftest` | Prueba que el gate sigue aceptando lo bueno. |
 | `make doctor` | Qué herramientas tenés y cuáles te faltan. |
 | `make bootstrap` | Las instala. |
+| `make lang` | En qué idioma está hablando Bouncer. |
+| `make clean` | Borra los directorios temporales y de caché. |
+
+`make` a secas los lista todos.
 
 Bouncer se fija qué contiene realmente tu repo y corre solo lo que aplica. Si el
 mes que viene agregás Terraform, no hay que tocar nada acá.
 
-Siete archivos, y ninguno es ingenioso:
+Las piezas, y ninguna es ingeniosa:
 
 | Ruta | Qué es |
 | --- | --- |
 | `Makefile` | Los comandos de arriba. |
 | `scripts/verify.sh` | El motor. Vive acá porque macOS trae GNU Make 3.81, que no tiene `.ONESHELL`. |
-| `scripts/messages.sh` | Todas las cadenas que imprime, en inglés y castellano. |
-| `.claude/hooks/` | Los dos hooks. |
+| `scripts/messages.sh` | Todas las cadenas que imprime Bouncer, en inglés y castellano. |
+| `scripts/bootstrap.sh` | Instala las herramientas. |
+| `scripts/demo.sh` | Corre los linters sobre `examples/broken/`. |
+| `.claude/settings.json` | Registra los dos hooks. |
+| `.claude/hooks/` | Los dos hooks: `lint-changed.sh` y `verify-on-stop.sh`. |
 | `.claude/agents/reviewer.md` | Las instrucciones del reviewer y sus permisos de herramientas. |
 | `.pre-commit-config.yaml` | La única definición de los checks estáticos rápidos. |
-| `CLAUDE.md` | Las reglas. |
+| `.yamllint.yml`, `.markdownlint.yaml` | La configuración de esos dos linters. |
+| `.terraform-docs.yml` | Activa el chequeo de documentación de los módulos de Terraform. |
+| `examples/` | Los fixtures de `make demo` y `make selftest`. |
+| `CLAUDE.md` | Las reglas que lee tu agente. |
 
 ### La trampa
 
@@ -768,12 +835,18 @@ personal nunca tienen que pelearse. `make lang` te dice cuál está activo. Un
 tercer idioma es un bloque `case` en `scripts/messages.sh`, y las claves que
 falten caen a inglés, así que una traducción a medias ya sirve.
 
+El chequeo de documentación de Terraform es doblemente opcional. Corre solo si
+un `.terraform-docs.yml` define un archivo de salida, y aun así solo sobre los
+módulos cuyo `README.md` tenga el marcador `BEGIN_TF_DOCS`, así que un
+directorio sin él, como un ejemplo de uso, queda afuera.
+
 ### Decisiones de diseño
 
 **El contenido que falta se saltea. Una herramienta que falta, no.** Que no haya
 archivos `.tf` significa saltear los checks de Terraform, y eso es honesto. Pero
-que haya `.tf` sin `tflint` instalado es fallo duro, porque si no el gate se pone
-verde por el peor motivo posible: no hay nada instalado que pueda atrapar nada.
+que haya `.tf` sin `tflint` instalado es fallo duro, porque si no el gate se
+pone verde por el peor motivo posible: no hay nada instalado que pueda atrapar
+nada.
 
 **Que diga `kubeconform ok` no significa que se hayan chequeado todos los
 manifiestos.** `-ignore-missing-schemas` es lo que deja pasar un recurso
@@ -785,36 +858,43 @@ una línea verde no se confunda con más cobertura de la que es.
 pelado cuenta los archivos de test, que están casi completamente cubiertos por
 definición y empujan el total por encima de la línea: 75% del fuente más 100% de
 tests reporta 89%. Sin un `src/` al que acotarlo, el piso se abandona en voz
-alta, porque un umbral que da verde por el motivo equivocado es peor que no tener
-umbral.
+alta, porque un umbral que da verde por el motivo equivocado es peor que no
+tener umbral.
 
-**Los archivos sin trackear advierten, no fallan.** `pre-commit` solo ve archivos
-que git está trackeando, así que uno recién creado se saltea el paso estático
-entero. Fallar por eso te bloquearía todo el día, y un gate que la gente apaga no
-sirve para nada. La advertencia mantiene la grieta a la vista en vez de
-silenciosa.
+**Los archivos sin trackear advierten, no fallan.** `pre-commit` solo ve
+archivos que git está trackeando, así que uno recién creado se saltea el paso
+estático entero. Fallar por eso te bloquearía todo el día, y un gate que la
+gente apaga no sirve para nada. La advertencia mantiene la grieta a la vista en
+vez de silenciosa.
 
-**El hook de Stop se rinde a los tres intentos.** Un check que el agente no puede
-arreglar generaría un loop infinito. El contador se resetea al liberar, porque
-sin eso el gate queda abierto el resto de la sesión.
+**El hook de Stop se rinde a los tres intentos.** Un check que el agente no
+puede arreglar generaría un loop infinito. El contador se resetea al liberar,
+porque sin eso el gate queda abierto el resto de la sesión.
 
 **El reviewer no debería escribir, y en general no puede.** Tiene `Write` y
 `Edit` negados. Conserva `Bash`, porque un revisor que no puede comprobar si un
 binario existe infla severidades sobre suposiciones, y con `Bash` se pueden
-escribir archivos. El último tramo de esa prohibición es una regla de su prompt y
-no un muro, y conviene saberlo antes de apuntarlo a un repo que te importa.
+escribir archivos. El último tramo de esa prohibición es una regla de su prompt
+y no un muro, y conviene saberlo antes de apuntarlo a un repo que te importa.
 
 ### Qué se corrió de verdad
 
 Un repositorio que habla de verificación debería decir qué probó en vez de pedir
-que le crean. Todo esto se corrió en macOS, punta a punta, contra el runtime
-real:
+que le crean. Todo esto se corrió en macOS.
+
+Contra una sesión real de Claude Code:
 
 - Los dos hooks registrados, y de qué archivo de settings salieron.
 - `PostToolUse` devolviendo un error de lint al contexto del agente.
 - `Stop` bloqueando un turno, la liberación al tercer intento, y el contador
   reseteándose.
 - `.claude/.skip-verify` dejando terminar un turno con el gate todavía en rojo.
+- El reviewer siguiendo el idioma configurado en los dos sentidos: preguntado en
+  castellano y con el default en inglés contestó en inglés, y configurado en
+  castellano contestó en castellano.
+
+En la línea de comandos:
+
 - Contenido real: `kubeconform` aceptando un manifiesto bueno y rechazando uno
   malo, `helm template` sobre un chart, `kyverno test` en los dos sentidos,
   `terraform validate`, `tflint`, `trivy`, `terraform-docs` sobre un módulo al
@@ -826,35 +906,40 @@ real:
   1123. Esa brecha es por lo que la etapa e2e existe aparte.
 - Nombres con espacio, comilla o salto de línea, tanto en archivos como en
   directorios.
-- `bootstrap` en sus tres ramas, con el código de salida de cada una.
-- Los dos idiomas en todos lados, incluido el reviewer: preguntado en castellano
-  y con el default en inglés puesto, contestó en inglés.
+- `bootstrap` en sus tres ramas y el código de salida de cada una, dos de ellas
+  con un gestor de paquetes simulado para no instalar nada.
+- Los dos idiomas en `verify`, `demo`, `doctor`, `bootstrap` y los dos hooks.
 - Instalarlo en un proyecto vacío siguiendo al pie de la letra los pasos de
   instalación de arriba: `make verify` en verde con contenido limpio y en rojo
-  con un script roto, los dos hooks saliendo con 2, y `make demo` y
-  `make selftest` negándose a correr cuando no se copiaron los fixtures.
+  con un script roto, los dos hooks saliendo con 2 al recibir la misma entrada
+  que les manda Claude Code, y `make demo` y `make selftest` negándose a correr
+  hasta que se copiaron los fixtures.
 
-Todo salvo el piso de cobertura es reproducible con `make demo` y
-`make selftest`. El piso es la excepción, porque la etapa de Python busca `src/`,
+Los chequeos sobre contenido real se pueden reproducir con `make demo` y
+`make selftest`, salvo el piso de cobertura: la etapa de Python busca `src/`,
 `tests/` y `pyproject.toml` en la raíz del repo y no puede ver un fixture en un
-subdirectorio.
+subdirectorio. Todo lo demás se corrió a mano y queda registrado acá, sin
+automatizar.
 
 Sin correr: el camino apt/dnf de `bootstrap.sh`, que está escrito pero nunca se
 ejecutó, y el presupuesto de tres minutos contra un repo con contenido real. Acá
-`verify` tarda unos dos segundos y `selftest` unos seis.
+`verify` tarda unos dos segundos y `selftest` unos cuatro.
 
 ### Límites
 
-`terraform init` y la primera corrida de `kubeconform` necesitan red, aunque
-nunca credenciales de nube.
+Partes del gate necesitan red, aunque nunca credenciales de nube: `pre-commit`
+baja sus entornos de hooks la primera vez, `kubeconform` baja los schemas que no
+tiene en caché, `trivy` baja su paquete de checks, y `terraform init` baja los
+providers que declare un módulo.
 
-El reviewer es un modelo de lenguaje, no un linter. Al principio era casi inútil:
-diez hallazgos en tres corridas, tres reales, y dos veces un arreglo propuesto
-que habría sido peor que el problema. Endurecerle las reglas, para que compruebe
-lo que puede comprobar y nunca recete un remedio que no probó, cambió eso. Ahora
-cuesta unos cinco minutos y medio sobre un diff de noventa líneas, la mayor parte
-verificando sus propias afirmaciones. `maxTurns` lo acota si te resulta lento.
-Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
+El reviewer es un modelo de lenguaje, no un linter. Sus dos primeras revisiones
+trajeron siete hallazgos, dos reales, y las dos veces el arreglo que propuso
+habría sido peor que el problema. Endurecerle las reglas, para que compruebe lo
+que puede comprobar y nunca recete un remedio que no probó, cambió eso: sus dos
+revisiones más recientes trajeron siete hallazgos, seis reales. El precio es
+tiempo, unos cinco minutos y medio sobre un diff de noventa líneas, la mayor
+parte verificando sus propias afirmaciones. `maxTurns` en su frontmatter limita
+cuánto corre. Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
 
 ### Licencia
 
