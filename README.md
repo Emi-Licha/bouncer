@@ -2,14 +2,7 @@
 
 **[English](#english)** | **[Español](#español)**
 
-```text
-______  _____ _   _ _   _ _____  ___________
-| ___ \|  _  | | | | \ | /  __ \|  ___| ___ \
-| |_/ /| | | | | | |  \| | /  \/| |__ | |_/ /
-| ___ \| | | | | | | . ` | |    |  __||    /
-| |_/ /\ \_/ / |_| | |\  | \__/\| |___| |\ \
-\____/  \___/ \___/\_| \_/\____/\____/\_| \_|
-```
+![Bouncer](assets/bouncer-wordmark.svg)
 
 ## English
 
@@ -18,8 +11,13 @@ ______  _____ _   _ _   _ _____  ___________
 Because it usually is not.
 
 So you read the diff, you find the unquoted variable, you prompt again, it tells
-you it is done again, and there goes your afternoon. The problem is not that the
-model is careless. It is that the model is the one grading its own work.
+you it is done again, and there goes your afternoon.
+
+This is not a prompting problem, and a better prompt will not fix it. Nor is it
+the model being careless. What is missing is structure: nothing checks the work
+between the agent saying "done" and you reading it. Bouncer is that structure, a
+harness around your agent. The model still makes every fix. The harness decides
+when the work counts as finished.
 
 **Bouncer closes the loop.** The agent acts, a check runs on its own, the failure
 goes straight back into the agent's context, and it corrects without being asked.
@@ -88,14 +86,17 @@ LINT FAILED: demo.sh
 
 ### What Bouncer is
 
-**It is a loop.** Act, check, feed the failure back, correct, repeat until it
-passes. Control theory calls that a closed loop, and closing it is the entire
-product. The distinctive part is not what gets checked. It is who decides. You
-take that away from the agent and hand it to a command that does not negotiate.
+**It is a harness, and its shape is a loop.** A harness is the structure you put
+around an agent, not the agent itself. It does not make the model smarter and it
+does not rewrite your prompts. It changes what the model is allowed to call
+finished. The shape is a closed loop: act, check, feed the failure back, correct,
+repeat until it passes. The distinctive part is not what gets checked. It is who
+decides, and that moves from the agent to a command that does not negotiate.
 
-It is not a library you import, a service you run, a pipeline or a graph. There
-is no orchestration anywhere in it: two events and one command, sitting in your
-repository, changing what your agent is allowed to do.
+It is not a library you import, a service you run, a pipeline or a graph, and it
+is not prompt engineering. There is no orchestration anywhere in it: two events
+and one command, sitting in your repository, changing what your agent is allowed
+to do.
 
 ### The cast
 
@@ -321,13 +322,18 @@ MIT. See [LICENSE](LICENSE).
 
 ## Español
 
-**Tu agente dice que terminó. Bouncer chequea los hechos.**
+**Tu agente dice que está listo. Bouncer chequea los factos.**
 
-Porque casi nunca es así.
+Porque casi nunca lo está.
 
 Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo, te
-vuelve a decir que terminó, y ahí se te fue la tarde. El problema no es que el
-modelo sea descuidado. Es que el modelo es el que se corrige a sí mismo.
+vuelve a decir que está listo, y ahí se te fue la tarde.
+
+Esto no es un problema de prompts, y promptear mejor no lo arregla. Tampoco es
+que el modelo sea descuidado. Lo que falta es estructura: nada chequea el trabajo
+entre que el agente dice "listo" y vos lo leés. Bouncer es esa estructura, un
+harness alrededor de tu agente. Los arreglos los sigue haciendo el modelo. El
+harness decide cuándo el trabajo cuenta como terminado.
 
 **Bouncer cierra el loop.** El agente actúa, un chequeo corre solo, la falla
 vuelve derecho a su contexto, y corrige sin que se lo pidas. Y no puede terminar
@@ -368,7 +374,7 @@ la lista no te hace entrar. Esa es toda la idea.
 
 | Sin Bouncer | Con Bouncer |
 | --- | --- |
-| El agente dice que terminó y descubrís que no. | No puede terminar el turno hasta que `make verify` pase. |
+| El agente dice que está listo y descubrís que no. | No puede terminar el turno hasta que `make verify` pase. |
 | Vos sos el linter, leyendo cada diff. | La queja del linter le cae sola en el contexto al agente. |
 | "Arreglá los errores de lint", prompt tras prompt. | Los arregla antes de que veas la respuesta. |
 | Los checks corren cuando alguien se acuerda de correrlos. | Corren en cada edición y en cada turno, se acuerde alguien o no. |
@@ -396,14 +402,17 @@ LINT FALLÓ: demo.sh
 
 ### Qué es Bouncer
 
-**Es un loop.** Actuar, chequear, devolver la falla, corregir, repetir hasta que
-pase. La teoría de control lo llama loop cerrado, y cerrarlo es todo el producto.
-Lo distintivo no es qué se chequea. Es quién decide. Se lo sacás al agente y se
-lo das a un comando que no negocia.
+**Es un harness, y tiene forma de loop.** Un harness es la estructura que ponés
+alrededor de un agente, no el agente en sí. No hace más inteligente al modelo ni
+te reescribe los prompts. Cambia lo que el modelo tiene permitido dar por
+terminado. La forma es un loop cerrado: actuar, chequear, devolver la falla,
+corregir, repetir hasta que pase. Lo distintivo no es qué se chequea. Es quién
+decide, y eso pasa del agente a un comando que no negocia.
 
 No es una librería que importás, ni un servicio que corrés, ni un pipeline, ni un
-graph. No hay orquestación en ningún lado: dos eventos y un comando, viviendo en
-tu repo, cambiando lo que tu agente tiene permitido hacer.
+graph, y tampoco es ingeniería de prompts. No hay orquestación en ningún lado: dos
+eventos y un comando, viviendo en tu repo, cambiando lo que tu agente tiene
+permitido hacer.
 
 ### El elenco
 
