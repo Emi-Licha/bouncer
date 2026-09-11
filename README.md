@@ -345,6 +345,7 @@ The pieces, and none of them is clever:
 | `Makefile` | The commands above. |
 | `scripts/verify.sh` | The engine. It lives here because macOS ships GNU Make 3.81, which has no `.ONESHELL`. |
 | `scripts/messages.sh` | Every string Bouncer prints, in English and Spanish. |
+| `scripts/yamllint.sh` | Runs `yamllint` for pre-commit and the lint hook, leaving out Helm chart templates wherever the chart lives. |
 | `scripts/bootstrap.sh` | Installs the tools. |
 | `scripts/demo.sh` | Runs the linters over `examples/broken/`. |
 | `.claude/settings.json` | Registers the two hooks. |
@@ -850,6 +851,7 @@ Las piezas, y ninguna es ingeniosa:
 | `Makefile` | Los comandos de arriba. |
 | `scripts/verify.sh` | El motor. Vive acá porque macOS trae GNU Make 3.81, que no tiene `.ONESHELL`. |
 | `scripts/messages.sh` | Todas las cadenas que imprime Bouncer, en inglés y castellano. |
+| `scripts/yamllint.sh` | Corre `yamllint` para pre-commit y el hook de lint, dejando afuera los templates de charts de Helm, estén donde estén. |
 | `scripts/bootstrap.sh` | Instala las herramientas. |
 | `scripts/demo.sh` | Corre los linters sobre `examples/broken/`. |
 | `.claude/settings.json` | Registra los dos hooks. |

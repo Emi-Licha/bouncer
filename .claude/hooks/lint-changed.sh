@@ -59,7 +59,13 @@ case "$file" in
     have shellcheck && { out=$(shellcheck -x "$file" 2>&1) || rc=$?; }
     ;;
   *.yaml|*.yml)
-    have yamllint && { out=$(yamllint -s "$file" 2>&1) || rc=$?; }
+    # The wrapper skips Helm chart templates, the same files pre-commit skips.
+    # Without it, fall back to plain yamllint rather than not linting at all.
+    if [ -r "$root/scripts/yamllint.sh" ]; then
+      have yamllint && { out=$(bash "$root/scripts/yamllint.sh" "$file" 2>&1) || rc=$?; }
+    else
+      have yamllint && { out=$(yamllint -s "$file" 2>&1) || rc=$?; }
+    fi
     ;;
   *.tf|*.tfvars)
     have terraform && { out=$(terraform fmt -check -diff "$file" 2>&1) || rc=$?; }

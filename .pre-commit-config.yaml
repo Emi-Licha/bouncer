@@ -9,7 +9,7 @@
 # Fixtures that are invalid on purpose, so `make demo` can show the gate
 # rejecting them. Excluding them here is what keeps the repository's own
 # `make verify` green.
-exclude: ^examples/broken/|^examples/valid/chart/templates/
+exclude: ^examples/broken/
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -29,9 +29,11 @@ repos:
         language: system
         pass_filenames: false
 
+      # Through a wrapper that leaves out Helm chart templates, wherever the
+      # chart lives. They are Go template text, and helm checks them instead.
       - id: yamllint
         name: yamllint
-        entry: yamllint -s
+        entry: bash scripts/yamllint.sh
         language: system
         types: [yaml]
 

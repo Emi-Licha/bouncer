@@ -30,7 +30,7 @@ stays fast and a fork does not inherit fixtures it never asked for.
 | `broken/bad-indent.yaml` | A mapping value indented under a scalar: a YAML syntax error. |
 | `broken/Dockerfile` | An untagged base image and an `apt-get install` that never cleans up. |
 | `valid/k8s/` | A plain manifest and a kustomization, so `kubeconform` has something to validate and the e2e stage something to apply. |
-| `valid/chart/` | A minimal chart. Its templates are Go template text, so they are excluded from `kubeconform` and linted only through `helm template`. |
+| `valid/chart/` | A minimal chart. Its templates are Go template text, so they are left out of `kubeconform` and `yamllint` and checked only through `helm template`. |
 | `valid/policy/` | A kyverno policy with a test that passes. |
 | `valid/terraform/` | A module with a generated README, which is what opts it into the `terraform-docs` check. |
 
@@ -60,7 +60,7 @@ sigue siendo rápido y quien forkee no arrastra fixtures que nunca pidió.
 | `broken/bad-indent.yaml` | Un valor de mapping indentado bajo un escalar: error de sintaxis YAML. |
 | `broken/Dockerfile` | Imagen base sin tag y un `apt-get install` que no limpia. |
 | `valid/k8s/` | Un manifiesto plano y una kustomization, para que `kubeconform` tenga algo que validar y la etapa e2e algo que aplicar. |
-| `valid/chart/` | Un chart mínimo. Sus templates son texto Go template, así que quedan fuera de `kubeconform` y se revisan solo vía `helm template`. |
+| `valid/chart/` | Un chart mínimo. Sus templates son texto Go template, así que quedan fuera de `kubeconform` y `yamllint` y se revisan solo vía `helm template`. |
 | `valid/policy/` | Una policy de kyverno con un test que pasa. |
 | `valid/terraform/` | Un módulo con README generado, que es lo que lo hace entrar al check de `terraform-docs`. |
 
