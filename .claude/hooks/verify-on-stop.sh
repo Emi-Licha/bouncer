@@ -9,9 +9,6 @@ set -u
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 cd "$root" 2>/dev/null || exit 0
 
-# Manual escape hatch. Git-ignored; never created automatically.
-[ -f .claude/.skip-verify ] && exit 0
-
 # Without these the hook cannot do its job, and wedging the session is worse
 # than letting the turn end.
 [ -f Makefile ] || exit 0
@@ -27,8 +24,26 @@ else
     case "$1" in
       stop_blocked)  printf '=== make verify FAILED (attempt %s/3): the turn cannot end ===' "$2" ;;
       stop_released) printf 'verify keeps failing after 3 attempts, releasing the gate' ;;
+      log_released)  printf 'gate released after 3 failed attempts, first failing check: %s' "$2" ;;
+      log_skipped)   printf 'gate skipped: .claude/.skip-verify is present' ;;
     esac
   }
+fi
+
+# Bouncer steps aside in exactly two places: the three-strike release and the
+# .skip-verify escape. Both end a turn with the gate red, and neither used to
+# leave a trace, so "how often does this happen here?" had no answer. One line
+# per event. Logging never fails the hook: a turn is not worth wedging over a
+# file that could not be written.
+note() {
+  printf '%s  %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$1" \
+    >> .bouncer-releases.log 2>/dev/null || true
+}
+
+# Manual escape hatch. Git-ignored; never created automatically.
+if [ -f .claude/.skip-verify ]; then
+  note "$(msg log_skipped)"
+  exit 0
 fi
 
 input=$(cat 2>/dev/null) || exit 0
@@ -59,6 +74,21 @@ if [ "$n" -ge 3 ]; then
   # Resetting here matters: without it the gate stays released for the rest of
   # the session instead of only for this deadlock.
   rm -f "$counter"
+  # Naming the check that was failing is what makes the log worth reading: three
+  # releases on the same check is a check to fix, not an agent to blame.
+  # The headers come from the catalogue rather than being spelled out here: in
+  # Spanish the block says CHECKS FALLIDOS, and an English-only pattern logged a
+  # question mark instead of the check that was failing.
+  first_under() {
+    [ -n "$1" ] || return 0
+    printf '%s\n' "$out" | awk -v hdr="$1" '
+      index($0, hdr) == 1 { f = 1; next }
+      f && /^  - / { sub(/^  - /, ""); print; exit }'
+  }
+  first=$(first_under "$(msg failed_checks)")
+  [ -n "$first" ] || first=$(first_under "$(msg missing_tools)")
+  [ -n "$first" ] || first="?"
+  note "$(msg log_released "$first")"
   printf '{"systemMessage": "%s"}\n' "$(msg stop_released)"
   exit 0
 fi

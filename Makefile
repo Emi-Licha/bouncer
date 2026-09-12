@@ -5,7 +5,7 @@ SHELL := /bin/bash
 # The logic lives in scripts/verify.sh because macOS ships GNU Make 3.81,
 # which has no .ONESHELL: every recipe line would otherwise be its own shell.
 
-.PHONY: help bootstrap doctor lang lint verify verify-full demo selftest clean
+.PHONY: help bootstrap doctor lang lint verify verify-full demo selftest releases clean
 
 help:
 	@echo "bootstrap    install the toolchain that verify expects (brew)"
@@ -17,6 +17,7 @@ help:
 	@echo "demo         show the gate rejecting the fixtures in examples/broken"
 	@echo "selftest     run the real gate over examples/valid, which must pass"
 	@echo "             (includes e2e, which skips itself when no cluster answers)"
+	@echo "releases     show every time the gate stepped aside (3 strikes, or .skip-verify)"
 	@echo "clean        remove scratch and cache directories"
 
 bootstrap:
@@ -44,6 +45,14 @@ demo:
 # warning, and with one it actually runs, so this covers more for no extra cost.
 selftest:
 	@BOUNCER_SELFTEST=1 bash scripts/verify.sh full
+
+# The two moments the gate does not gate. Written by the Stop hook, read here.
+releases:
+	@if [ -s .bouncer-releases.log ]; then \
+	  cat .bouncer-releases.log; \
+	else \
+	  bash -c '. scripts/messages.sh; msg releases_empty; echo'; \
+	fi
 
 clean:
 	@rm -rf .verify-tmp .pytest_cache .ruff_cache .mypy_cache

@@ -92,6 +92,9 @@ msg_en() {
     lint_failed)        printf 'LINT FAILED: %%s' ;;
     stop_blocked)       printf '=== make verify FAILED (attempt %%s/3): the turn cannot end ===' ;;
     stop_released)      printf 'verify keeps failing after 3 attempts, releasing the gate' ;;
+    log_released)       printf 'gate released after 3 failed attempts, first failing check: %%s' ;;
+    log_skipped)        printf 'gate skipped: .claude/.skip-verify is present' ;;
+    releases_empty)     printf 'nothing recorded: the gate has never stepped aside in this repository' ;;
     *)                  printf '' ;;
   esac
 }
@@ -161,6 +164,9 @@ msg_es() {
     lint_failed)        printf 'LINT FALLÓ: %%s' ;;
     stop_blocked)       printf '=== make verify FALLÓ (intento %%s/3): no se puede terminar el turno ===' ;;
     stop_released)      printf 'verify sigue fallando después de 3 intentos, se libera el gate' ;;
+    log_released)       printf 'gate liberado después de 3 intentos fallidos, primer check que falló: %%s' ;;
+    log_skipped)        printf 'gate salteado: está .claude/.skip-verify' ;;
+    releases_empty)     printf 'no hay nada registrado: el gate nunca se hizo a un lado en este repo' ;;
     *)                  printf '' ;;
   esac
 }
