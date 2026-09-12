@@ -155,8 +155,9 @@ you know what "done" means in your repository, and that is the gap Bouncer fills
 Pieces eight and nine, Bouncer does not do. Traces earn their keep when a run
 cannot be repeated, and a failing `make verify` can be: run it again on the same
 machine and you get the same output, in more detail than a log would carry. Not
-across machines, though, and the gate says so out loud when it happens: no
-cluster reachable, schemas it could not check, files git is not tracking. What
+across machines, though, and the gate says so out loud when it happens: schemas
+it could not check, files git is not tracking. A cluster it cannot reach is the
+same kind of gap, and `make verify-full` is where that one surfaces. What
 cannot be recovered afterwards is the moment the gate did not run at all, so
 that is what gets written down: `.bouncer-releases.log` gets a line every time
 the gate is released after three failures or skipped through
@@ -508,8 +509,6 @@ Against a live Claude Code session:
 - `PostToolUse` returning a lint error into the agent's context.
 - `Stop` blocking a turn, the three-strike release, and the counter resetting.
 - `.claude/.skip-verify` letting a turn end with the gate still red.
-- The release log on both of its paths, in both languages, and degrading to a
-  named "could not be read" line when the catalogue is missing.
 - The reviewer following the configured language both ways: asked in Spanish
   with the English default it answered in English, and set to Spanish it
   answered in Spanish.
@@ -528,6 +527,10 @@ At the command line:
 - `bootstrap` on all three of its branches and the exit code each returns, two
   of them with a stand-in package manager so nothing was installed.
 - Both languages across `verify`, `demo`, `doctor`, `bootstrap` and both hooks.
+- The release log on both of its paths and in both languages, by feeding the
+  Stop hook the input Claude Code sends it, in a scratch copy of the repository.
+  Including the two ways it degrades: no catalogue, and a reformatted summary,
+  which log that the failing check could not be read rather than a bare `?`.
 - Installing into an empty project by following the install steps above to the
   letter: `make verify` green on clean content and red on a broken script, both
   hooks exiting 2 when fed the same input Claude Code sends them, and
@@ -730,8 +733,9 @@ Las piezas ocho y nueve Bouncer no las hace. Las trazas valen sobre todo cuando
 una corrida no se puede repetir, y un `make verify` que falla sí se puede:
 corrélo de nuevo en la misma máquina y te da lo mismo, con más detalle del que
 un log iba a guardar. Entre máquinas distintas no, y el gate lo dice en voz alta
-cuando pasa: no hay cluster, schemas que no pudo chequear, archivos que git no
-está trackeando. Lo que no se recupera después es el momento en que el gate
+cuando pasa: schemas que no pudo chequear, archivos que git no está trackeando.
+Un cluster al que no llega es la misma clase de hueco, y ese aparece en
+`make verify-full`. Lo que no se recupera después es el momento en que el gate
 directamente no corrió, así que eso es lo que queda escrito:
 `.bouncer-releases.log` suma una línea cada vez que el gate se libera después de
 tres fallas o se saltea por `.claude/.skip-verify`, y `make releases` te lo
@@ -1089,8 +1093,6 @@ Contra una sesión real de Claude Code:
 - `Stop` bloqueando un turno, la liberación al tercer intento, y el contador
   reseteándose.
 - `.claude/.skip-verify` dejando terminar un turno con el gate todavía en rojo.
-- El registro de liberaciones en sus dos caminos, en los dos idiomas, y cayendo
-  a una línea que dice "no se pudo leer" cuando falta el catálogo.
 - El reviewer siguiendo el idioma configurado en los dos sentidos: preguntado en
   castellano y con el default en inglés contestó en inglés, y configurado en
   castellano contestó en castellano.
@@ -1111,6 +1113,11 @@ En la línea de comandos:
 - `bootstrap` en sus tres ramas y el código de salida de cada una, dos de ellas
   con un gestor de paquetes simulado para no instalar nada.
 - Los dos idiomas en `verify`, `demo`, `doctor`, `bootstrap` y los dos hooks.
+- El registro de liberaciones en sus dos caminos y en los dos idiomas, dándole
+  al hook de Stop la misma entrada que le manda Claude Code, sobre una copia de
+  prueba del repo. Incluidas sus dos formas de degradarse: sin catálogo, y con
+  el resumen reformateado, que anotan que no se pudo leer el check en vez de un
+  `?` pelado.
 - Instalarlo en un proyecto vacío siguiendo al pie de la letra los pasos de
   instalación de arriba: `make verify` en verde con contenido limpio y en rojo
   con un script roto, los dos hooks saliendo con 2 al recibir la misma entrada
