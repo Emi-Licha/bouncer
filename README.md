@@ -52,11 +52,14 @@ Helm charts, Kyverno policies, and leaked secrets.
 It only runs what applies. No Terraform in your repository means no Terraform
 checks, and adding some next month needs no edit here.
 
-Those fast checks are defined once, in `.pre-commit-config.yaml`, and the gate
-runs them from there. So `make verify` and your `git commit` can never disagree
-about what "clean" means. They also call the binaries `make bootstrap` installed
-rather than fetching their own, so nobody drifts to a different version of
-`shellcheck` than the gate uses.
+Those fast checks are defined once, in `.pre-commit-config.yaml`, and run by
+`pre-commit`, an off-the-shelf runner. The gate calls it and so does your
+`git commit`, so the two can never disagree about what "clean" means. The
+linters in there are declared local, which means they call the binaries
+`make bootstrap` installed rather than fetching their own, so nobody ends up on
+a different `shellcheck` than the gate uses. Five small housekeeping hooks, the
+merge-conflict check among them, do come from `pre-commit`'s own repository,
+pinned to a version.
 
 So far this is a command sitting in a Makefile. Someone still has to run it, and
 after the third time you will stop.
@@ -85,8 +88,8 @@ without you typing anything.
 Waiting until the end is late, though. The agent can write twenty files before
 anything checks the first one.
 
-**The `PostToolUse` hook shortens that.** It fires right after a file is edited,
-lints only that file, and takes under two seconds. Your `retry.sh` comes back
+**The `PostToolUse` hook shortens that.** It fires right after a file is edited
+or written, lints only that file, and takes under two seconds. Your `retry.sh` comes back
 with its unquoted variable before the agent has moved on.
 
 One thing is still missing. A check the agent cannot satisfy would loop forever,
@@ -651,10 +654,13 @@ Corre solo lo que aplica. Si no hay Terraform en tu repo, no hay checks de
 Terraform, y si el mes que viene agregás, acá no hay que tocar nada.
 
 Esos checks rápidos están definidos en un solo lugar, `.pre-commit-config.yaml`,
-y el gate los corre de ahí. Así `make verify` y tu `git commit` nunca pueden
-estar en desacuerdo sobre qué significa "limpio". Además llaman a los binarios
-que instaló `make bootstrap` en vez de bajarse los suyos, así que nadie termina
-usando un `shellcheck` distinto del que usa el gate.
+y los corre `pre-commit`, una herramienta ya hecha. La llama el gate y la llama
+tu `git commit`, así que los dos nunca pueden estar en desacuerdo sobre qué
+significa "limpio". Los linters de ahí están declarados como locales, o sea que
+llaman a los binarios que instaló `make bootstrap` en vez de bajarse los suyos,
+así que nadie termina usando un `shellcheck` distinto del que usa el gate. Cinco
+hooks chicos de mantenimiento, entre ellos el que busca conflictos de merge, sí
+vienen del repo de `pre-commit`, fijados a una versión.
 
 Hasta acá esto es un comando viviendo en un Makefile. Alguien lo tiene que
 correr, y a la tercera vez vos ya no lo corrés más.
@@ -683,8 +689,9 @@ vos escribas nada.
 Igual, esperar hasta el final es tarde. El agente puede escribir veinte archivos
 antes de que algo chequee el primero.
 
-**El hook de `PostToolUse` acorta eso.** Se dispara justo después de editar un
-archivo, lintea solo ese archivo, y tarda menos de dos segundos. Tu `retry.sh`
+**El hook de `PostToolUse` acorta eso.** Se dispara justo después de que se
+edita o se escribe un archivo, lintea solo ese archivo, y tarda menos de dos
+segundos. Tu `retry.sh`
 vuelve con la variable sin comillas antes de que el agente siga para otro lado.
 
 Falta una cosa más. Un check que el agente no puede satisfacer generaría un loop
