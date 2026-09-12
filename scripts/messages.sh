@@ -39,6 +39,7 @@ msg_en() {
     required_by)        printf '(required by: %%s)' ;;
     untracked_warn)     printf 'untracked files are invisible to pre-commit:' ;;
     no_cluster)         printf 'skipped: no reachable cluster' ;;
+    units_missing)      printf 'scripts/tfdocs-test.sh is missing, so the helper cases did not run' ;;
     kubeconform_skipped) printf '%%s resource(s) had no schema and were not validated' ;;
     unknown_stage)      printf 'unknown stage: %%s (expected: lint, core, full, doctor)' ;;
     doctor_tool)        printf 'TOOL' ;;
@@ -55,7 +56,7 @@ msg_en() {
     skip_tfdocs_nooutput) printf 'terraform-docs (%%s sets no output file, so --output-check verifies nothing)' ;;
     skip_tfdocs_unparsed) printf 'terraform-docs (could not read output.file from %%s: only block style is understood)' ;;
     skip_python)        printf 'python (no .py files)' ;;
-    skip_units)         printf 'unit cases (no scripts/tfdocs-test.sh)' ;;
+
     skip_mypy)          printf 'mypy (no src/)' ;;
     skip_pytest)        printf 'pytest (needs tests/ and pyproject.toml)' ;;
     skip_cov)           printf 'coverage floor (needs a src/ layout to scope it to)' ;;
@@ -107,6 +108,7 @@ msg_es() {
     required_by)        printf '(lo pide: %%s)' ;;
     untracked_warn)     printf 'los archivos sin trackear son invisibles para pre-commit:' ;;
     no_cluster)         printf 'salteado: no hay cluster accesible' ;;
+    units_missing)      printf 'falta scripts/tfdocs-test.sh, así que los casos de los helpers no corrieron' ;;
     kubeconform_skipped) printf '%%s recurso(s) sin schema, no se validaron' ;;
     unknown_stage)      printf 'etapa desconocida: %%s (se esperaba: lint, core, full, doctor)' ;;
     doctor_tool)        printf 'HERRAMIENTA' ;;
@@ -123,7 +125,7 @@ msg_es() {
     skip_tfdocs_nooutput) printf 'terraform-docs (%%s no define archivo de salida, así que --output-check no verifica nada)' ;;
     skip_tfdocs_unparsed) printf 'terraform-docs (no se pudo leer output.file de %%s: solo se entiende el estilo en bloque)' ;;
     skip_python)        printf 'python (no hay archivos .py)' ;;
-    skip_units)         printf 'casos unitarios (no hay scripts/tfdocs-test.sh)' ;;
+
     skip_mypy)          printf 'mypy (no hay src/)' ;;
     skip_pytest)        printf 'pytest (necesita tests/ y pyproject.toml)' ;;
     skip_cov)           printf 'piso de cobertura (necesita un layout src/ al que acotarlo)' ;;

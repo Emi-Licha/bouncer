@@ -86,6 +86,8 @@ Here is the Stop hook refusing to let a turn end:
 
 ```text
 === make verify FAILED (attempt 1/3): the turn cannot end ===
+== units ==
+  tfdocs helpers               ok
 == static (pre-commit) ==
   pre-commit                   FAIL
       yamllint.................................................................Failed
@@ -607,6 +609,8 @@ Así se ve el hook de Stop negándose a dejar terminar un turno:
 
 ```text
 === make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
+== units ==
+  tfdocs helpers               ok
 == static (pre-commit) ==
   pre-commit                   FAIL
       yamllint.................................................................Failed

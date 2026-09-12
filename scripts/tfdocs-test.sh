@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Regression cases for the helpers in tfdocs.sh. `make selftest` runs these.
+# Regression cases for the helpers in tfdocs.sh. verify.sh runs them from its
+# units stage, so they are part of `make verify` and a regression blocks the
+# gate rather than waiting for someone to run them by hand.
 #
 # Every case here is a bug that shipped: a file: key inside a template: block
 # read as the output file, a flow-style map reported as "no output file", one

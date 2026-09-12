@@ -174,13 +174,16 @@ in_chart() {
 # regression nobody is blocked by is one that ships, and these have shipped
 # twice. They build their own tree under TMPDIR and take a tenth of a second.
 stage_units() {
+  echo "== units =="
   local t
   t="$(dirname "$0")/tfdocs-test.sh"
   if [ ! -f "$t" ]; then
-    skip "$(msg skip_units)"
+    # Not "no content of that kind in this repo", which is what the skipped
+    # block means: a file of Bouncer's own install is gone. It warns for the
+    # same reason the e2e stage warns about a missing cluster.
+    printf '  %swarn%s  %s\n' "$Y" "$O" "$(msg units_missing)"
     return
   fi
-  echo "== units =="
   run "tfdocs helpers" bash "$t"
 }
 
