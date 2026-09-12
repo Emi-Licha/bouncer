@@ -332,7 +332,7 @@ anything is a gate you do not have.
 | `make lint` | The fast half on its own. |
 | `make verify-full` | Adds a server-side dry run against a live cluster. |
 | `make demo` | Proves the gate still catches things. |
-| `make selftest` | Proves the gate still accepts good things. |
+| `make selftest` | Proves the gate still accepts good things, and runs the cases no fixture can express. |
 | `make doctor` | Which tools you have and which you are missing. |
 | `make bootstrap` | Installs them. |
 | `make lang` | Which language Bouncer is speaking. |
@@ -351,6 +351,8 @@ The pieces, and none of them is clever:
 | `scripts/verify.sh` | The engine. It lives here because macOS ships GNU Make 3.81, which has no `.ONESHELL`. |
 | `scripts/messages.sh` | Every string Bouncer prints, in English and Spanish. |
 | `scripts/yamllint.sh` | Runs `yamllint` for pre-commit and the lint hook, leaving out Helm chart templates wherever the chart lives. |
+| `scripts/tfdocs.sh` | Finds the terraform-docs config a module will use, and reads its output file. |
+| `scripts/tfdocs-test.sh` | The cases those two have already got wrong, run by `make selftest`. |
 | `scripts/bootstrap.sh` | Installs the tools. |
 | `scripts/demo.sh` | Runs the linters over `examples/broken/`. |
 | `.claude/settings.json` | Registers the two hooks. |
@@ -402,10 +404,12 @@ block in `scripts/messages.sh`, and missing keys fall back to English, so a
 half-finished translation still works.
 
 The documentation check for Terraform is opt-in twice over. It runs only where a
-`.terraform-docs.yml` sets an output file, found the way terraform-docs finds it:
-in the module first, then at the root. And then only on modules where that file
-carries the `BEGIN_TF_DOCS` marker, so a directory without it, such as a usage
-example, is left alone.
+`.terraform-docs.yml` sets an output file, found the way terraform-docs finds
+it: in the module first, then at the root, and last in `~/.tfdocs.d`, which is
+outside the repository. A config there drives the check on your machine and on
+nobody else's, CI included. And then only on modules where that file carries the
+`BEGIN_TF_DOCS` marker, so a directory without it, such as a usage example, is
+left alone.
 
 Bouncer reads that output file with a small parser that understands the usual
 block style. A config that writes `output:` as a one-line `{file: ...}` map is
@@ -852,7 +856,7 @@ que nunca viste bloquear nada es un gate que no tenés.
 | `make lint` | Solo la mitad rápida. |
 | `make verify-full` | Agrega un dry run server-side contra un cluster real. |
 | `make demo` | Prueba que el gate sigue atrapando cosas. |
-| `make selftest` | Prueba que el gate sigue aceptando lo bueno. |
+| `make selftest` | Prueba que el gate sigue aceptando lo bueno, y corre los casos que ningún fixture puede expresar. |
 | `make doctor` | Qué herramientas tenés y cuáles te faltan. |
 | `make bootstrap` | Las instala. |
 | `make lang` | En qué idioma está hablando Bouncer. |
@@ -871,6 +875,8 @@ Las piezas, y ninguna es ingeniosa:
 | `scripts/verify.sh` | El motor. Vive acá porque macOS trae GNU Make 3.81, que no tiene `.ONESHELL`. |
 | `scripts/messages.sh` | Todas las cadenas que imprime Bouncer, en inglés y castellano. |
 | `scripts/yamllint.sh` | Corre `yamllint` para pre-commit y el hook de lint, dejando afuera los templates de charts de Helm, estén donde estén. |
+| `scripts/tfdocs.sh` | Encuentra la config de terraform-docs que va a usar un módulo, y lee su archivo de salida. |
+| `scripts/tfdocs-test.sh` | Los casos que esas dos ya erraron alguna vez, que corre `make selftest`. |
 | `scripts/bootstrap.sh` | Instala las herramientas. |
 | `scripts/demo.sh` | Corre los linters sobre `examples/broken/`. |
 | `.claude/settings.json` | Registra los dos hooks. |
@@ -923,9 +929,11 @@ falten caen a inglés, así que una traducción a medias ya sirve.
 
 El chequeo de documentación de Terraform es doblemente opcional. Corre solo
 donde un `.terraform-docs.yml` define un archivo de salida, buscado igual que lo
-busca terraform-docs: primero en el módulo, después en la raíz. Y aun así solo
-sobre los módulos donde ese archivo tenga el marcador `BEGIN_TF_DOCS`, así que
-un directorio sin él, como un ejemplo de uso, queda afuera.
+busca terraform-docs: primero en el módulo, después en la raíz, y por último en
+`~/.tfdocs.d`, que está fuera del repo. Una config ahí maneja el chequeo en tu
+máquina y en la de nadie más, CI incluido. Y aun así solo sobre los módulos
+donde ese archivo tenga el marcador `BEGIN_TF_DOCS`, así que un directorio sin
+él, como un ejemplo de uso, queda afuera.
 
 Bouncer lee ese archivo de salida con un parser chico que entiende el estilo en
 bloque de siempre. Una config que escribe `output:` como un mapa en una línea,

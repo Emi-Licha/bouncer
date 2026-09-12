@@ -41,6 +41,11 @@ Adding a fixture to `broken/` means adding a matching assertion in
 Adding one to `valid/` needs nothing: `make selftest` runs the whole gate, so it
 is picked up by whichever stage claims it.
 
+Some things a fixture cannot express. The shapes of a `.terraform-docs.yml` that
+the config parser has to read are one: a fixture is one config in one shape, and
+the bugs were in the other shapes. Those cases live in `scripts/tfdocs-test.sh`,
+which `make selftest` runs next to the fixtures.
+
 Python is not covered by `selftest`. The python stage looks for `src/`, `tests/`
 and `pyproject.toml` at the repository root, so a fixture in a subdirectory is
 invisible to it.
@@ -72,6 +77,11 @@ Agregar un fixture a `broken/` implica agregar su assertion en `scripts/demo.sh`
 sin ella es solo un archivo inválido que nadie mira. Agregar uno a `valid/` no
 necesita nada: `make selftest` corre el gate entero, así que lo levanta la etapa
 que le corresponda.
+
+Hay cosas que un fixture no puede expresar. Las formas de un `.terraform-docs.yml`
+que el parser tiene que leer son una: un fixture es una config en una forma, y los
+bugs estaban en las otras formas. Esos casos viven en `scripts/tfdocs-test.sh`,
+que `make selftest` corre al lado de los fixtures.
 
 Python no está cubierto por `selftest`. La etapa de python busca `src/`, `tests/`
 y `pyproject.toml` en la raíz del repo, así que un fixture en un subdirectorio le

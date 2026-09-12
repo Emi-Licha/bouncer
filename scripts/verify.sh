@@ -17,6 +17,11 @@ set -uo pipefail
 # shellcheck source=scripts/messages.sh
 . "$(dirname "$0")/messages.sh"
 
+# The terraform-docs config helpers live apart so scripts/tfdocs-test.sh can
+# source them and assert on them directly.
+# shellcheck source=scripts/tfdocs.sh
+. "$(dirname "$0")/tfdocs.sh"
+
 STAGE="${1:-core}"
 RUN_OUT=""
 TMP=.verify-tmp
@@ -163,6 +168,16 @@ in_chart() {
   return 1
 }
 
+# Cases that no fixture under examples/ can express: a file: key inside a
+# template: block, a flow-style output: map, one config reached from two
+# modules. They run with the fixtures rather than only by hand, so the next
+# edit to the helpers has something to fail against.
+stage_units() {
+  [ -n "${BOUNCER_SELFTEST:-}" ] || return
+  echo "== units =="
+  run "tfdocs helpers" bash "$(dirname "$0")/tfdocs-test.sh"
+}
+
 stage_k8s() {
   scan \( -name '*.yaml' -o -name '*.yml' \) > "$TMP/yaml.z"
   : > "$TMP/k8s.z"
@@ -251,51 +266,6 @@ tf_validate() {
   cd "$1" || return 1
   terraform init -backend=false -input=false -no-color >/dev/null || return 1
   terraform validate -no-color
-}
-
-# tfdocs_config <module dir>: the config terraform-docs will use for that
-# module, searched in its order: the module, the module's .config/, the current
-# directory, its .config/, then ~/.tfdocs.d/. Prints nothing when there is none.
-# A leading ./ is dropped, so one file always comes out spelled one way, whether
-# it was reached from a module at the root or from one in a subdirectory.
-tfdocs_config() {
-  local c
-  for c in "$1/.terraform-docs.yml" "$1/.config/.terraform-docs.yml" \
-           .terraform-docs.yml .config/.terraform-docs.yml \
-           "${HOME:-/nonexistent}/.tfdocs.d/.terraform-docs.yml"; do
-    if [ -f "$c" ]; then
-      printf '%s' "${c#./}"
-      return
-    fi
-  done
-}
-
-# tfdocs_output_file <config>: output.file, with quotes and a trailing comment
-# stripped. Only a key sitting directly under output: counts. A file: line in
-# another section, or inside the text of a template: block, is more deeply
-# indented or outside the block, and is ignored. Block style only: a one-line
-# `output: {...}` map yields nothing, and the caller reports it as unreadable.
-tfdocs_output_file() {
-  awk -v q="'" '
-    /^output[[:space:]]*:[[:space:]]*(#.*)?$/ { inside = 1; indent = -1; next }
-    inside {
-      if ($0 ~ /^[[:space:]]*(#.*)?$/) next
-      match($0, /^[[:space:]]*/)
-      if (RLENGTH == 0) exit
-      if (indent < 0) indent = RLENGTH
-      if (RLENGTH < indent) exit
-      if (RLENGTH == indent && $0 ~ /^[[:space:]]*file[[:space:]]*:/) {
-        v = $0
-        sub(/^[[:space:]]*file[[:space:]]*:[[:space:]]*/, "", v)
-        sub(/[[:space:]]+#.*$/, "", v)
-        sub(/[[:space:]]+$/, "", v)
-        gsub(/"/, "", v)
-        gsub(q, "", v)
-        print v
-        exit
-      }
-    }
-  ' "$1"
 }
 
 stage_terraform() {
@@ -455,6 +425,7 @@ case "$STAGE" in
     ;;
   core|full)
     stage_hooks
+    stage_units
     stage_lint
     stage_k8s
     stage_helm
