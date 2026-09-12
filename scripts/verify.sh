@@ -170,12 +170,18 @@ in_chart() {
 
 # Cases that no fixture under examples/ can express: a file: key inside a
 # template: block, a flow-style output: map, one config reached from two
-# modules. They run with the fixtures rather than only by hand, so the next
-# edit to the helpers has something to fail against.
+# modules. They run in the ordinary gate, not only in the self-test: a
+# regression nobody is blocked by is one that ships, and these have shipped
+# twice. They build their own tree under TMPDIR and take a tenth of a second.
 stage_units() {
-  [ -n "${BOUNCER_SELFTEST:-}" ] || return
+  local t
+  t="$(dirname "$0")/tfdocs-test.sh"
+  if [ ! -f "$t" ]; then
+    skip "$(msg skip_units)"
+    return
+  fi
   echo "== units =="
-  run "tfdocs helpers" bash "$(dirname "$0")/tfdocs-test.sh"
+  run "tfdocs helpers" bash "$t"
 }
 
 stage_k8s() {

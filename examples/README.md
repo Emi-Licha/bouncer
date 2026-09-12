@@ -44,7 +44,7 @@ is picked up by whichever stage claims it.
 Some things a fixture cannot express. The shapes of a `.terraform-docs.yml` that
 the config parser has to read are one: a fixture is one config in one shape, and
 the bugs were in the other shapes. Those cases live in `scripts/tfdocs-test.sh`,
-which `make selftest` runs next to the fixtures.
+which `make verify` runs, fixtures or no fixtures.
 
 Python is not covered by `selftest`. The python stage looks for `src/`, `tests/`
 and `pyproject.toml` at the repository root, so a fixture in a subdirectory is
@@ -81,7 +81,7 @@ que le corresponda.
 Hay cosas que un fixture no puede expresar. Las formas de un `.terraform-docs.yml`
 que el parser tiene que leer son una: un fixture es una config en una forma, y los
 bugs estaban en las otras formas. Esos casos viven en `scripts/tfdocs-test.sh`,
-que `make selftest` corre al lado de los fixtures.
+que `make verify` corre, haya fixtures o no.
 
 Python no está cubierto por `selftest`. La etapa de python busca `src/`, `tests/`
 y `pyproject.toml` en la raíz del repo, así que un fixture en un subdirectorio le
