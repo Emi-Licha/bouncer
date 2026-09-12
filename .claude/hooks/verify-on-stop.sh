@@ -26,6 +26,8 @@ else
       stop_released) printf 'verify keeps failing after 3 attempts, releasing the gate' ;;
       log_released)  printf 'gate released after 3 failed attempts, first failing check: %s' "$2" ;;
       log_skipped)   printf 'gate skipped: .claude/.skip-verify is present' ;;
+      log_released_unreadable)
+                     printf 'gate released after 3 failed attempts; the failing check could not be read from make verify output' ;;
     esac
   }
 fi
@@ -87,8 +89,14 @@ if [ "$n" -ge 3 ]; then
   }
   first=$(first_under "$(msg failed_checks)")
   [ -n "$first" ] || first=$(first_under "$(msg missing_tools)")
-  [ -n "$first" ] || first="?"
-  note "$(msg log_released "$first")"
+  # Reading that name depends on the shape of verify.sh's summary. If that shape
+  # changes, the log says so instead of writing a bare question mark that looks
+  # like nothing was failing.
+  if [ -n "$first" ]; then
+    note "$(msg log_released "$first")"
+  else
+    note "$(msg log_released_unreadable)"
+  fi
   printf '{"systemMessage": "%s"}\n' "$(msg stop_released)"
   exit 0
 fi

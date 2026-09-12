@@ -94,6 +94,7 @@ msg_en() {
     stop_released)      printf 'verify keeps failing after 3 attempts, releasing the gate' ;;
     log_released)       printf 'gate released after 3 failed attempts, first failing check: %%s' ;;
     log_skipped)        printf 'gate skipped: .claude/.skip-verify is present' ;;
+    log_released_unreadable) printf 'gate released after 3 failed attempts; the failing check could not be read from make verify output, whose format may have changed' ;;
     releases_empty)     printf 'nothing recorded: the gate has never stepped aside in this repository' ;;
     *)                  printf '' ;;
   esac
@@ -166,6 +167,7 @@ msg_es() {
     stop_released)      printf 'verify sigue fallando después de 3 intentos, se libera el gate' ;;
     log_released)       printf 'gate liberado después de 3 intentos fallidos, primer check que falló: %%s' ;;
     log_skipped)        printf 'gate salteado: está .claude/.skip-verify' ;;
+    log_released_unreadable) printf 'gate liberado después de 3 intentos fallidos; no se pudo leer el check que falló de la salida de make verify, que puede haber cambiado de formato' ;;
     releases_empty)     printf 'no hay nada registrado: el gate nunca se hizo a un lado en este repo' ;;
     *)                  printf '' ;;
   esac

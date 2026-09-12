@@ -142,24 +142,26 @@ all, and three are what lets you trust the result:
 | 2 | A loop | Calling the model again with the result, so one step leads to the next. | Claude Code |
 | 3 | Memory | Carrying what already happened into the next call, since the model keeps nothing. | Claude Code |
 | 4 | Context | Choosing what the model sees each time, because the whole repository does not fit and would not help. | Claude Code |
-| 5 | A place to work | A sandbox, so a bad command lands there and not on your machine. | Claude Code |
+| 5 | A place to work | A sandbox, so a bad command lands there and not on your machine. | Claude Code, as far as you configure it |
 | 6 | A goal, and verification | Knowing the work is done because something checked, not because the model said so. | **Bouncer** |
 | 7 | Permissions and limits | What it may do on its own, what it must ask about, and when to stop trying. | Claude Code, and Bouncer for the stopping |
 | 8 | Observability | Seeing what actually happened on a run. | Nobody here, see below |
 | 9 | Evals | Measuring whether a change to the harness helped or hurt. | Nobody here, see below |
 
-Bouncer is piece six, and half of piece seven. That is the whole scope. The
-first five come with your agent already, and they are the reason it can work at
-all. Piece six is the one nothing ships by default, because only you know what
-"done" means in your repository.
+Bouncer is piece six, and half of piece seven. That is the whole scope. Five of
+those first six come with your agent already. The sixth does not, because only
+you know what "done" means in your repository, and that is the gap Bouncer fills.
 
-Pieces eight and nine, Bouncer does not do. Traces matter most when a run cannot
-be repeated, and a run of `make verify` can: same code, same result, so `make
-verify` is the trace. What is genuinely missing is a record of the moments
-Bouncer steps aside, and it keeps one: `.bouncer-releases.log` gets a line every
-time the gate is released after three failures or skipped through
-`.claude/.skip-verify`. `make releases` prints it. Evals, measuring a change to
-the harness itself, are not covered at all.
+Pieces eight and nine, Bouncer does not do. Traces earn their keep when a run
+cannot be repeated, and a failing `make verify` can be: run it again on the same
+machine and you get the same output, in more detail than a log would carry. Not
+across machines, though, and the gate says so out loud when it happens: no
+cluster reachable, schemas it could not check, files git is not tracking. What
+cannot be recovered afterwards is the moment the gate did not run at all, so
+that is what gets written down: `.bouncer-releases.log` gets a line every time
+the gate is released after three failures or skipped through
+`.claude/.skip-verify`, and `make releases` prints it. Evals, measuring a change
+to the harness itself, are not covered at all.
 
 That nine-piece map is not ours. It comes from [santi's walk-through of harness
 engineering](https://x.com/santtiagom_/status/2098782814837543075), which builds
@@ -506,6 +508,8 @@ Against a live Claude Code session:
 - `PostToolUse` returning a lint error into the agent's context.
 - `Stop` blocking a turn, the three-strike release, and the counter resetting.
 - `.claude/.skip-verify` letting a turn end with the gate still red.
+- The release log on both of its paths, in both languages, and degrading to a
+  named "could not be read" line when the catalogue is missing.
 - The reviewer following the configured language both ways: asked in Spanish
   with the English default it answered in English, and set to Spanish it
   answered in Spanish.
@@ -560,6 +564,12 @@ recent reviews produced seven findings, six of them real. The price is time,
 about five and a half minutes on a ninety-line diff, most of it spent verifying
 its own claims, and nothing in its frontmatter caps it. Reproduce a finding
 before acting on it, either way.
+
+`.bouncer-releases.log` is a note to yourself, not an audit trail. It sits in
+your working tree, so anything that can write there can edit it, the agent
+included. Two sessions running at once interleave lines that look alike, and
+nothing rotates the file: leave `.claude/.skip-verify` in place and it grows by
+a line per turn.
 
 Nothing enforces what `CLAUDE.md` asks for: the plan, the commit, the review and
 the no-push rule. They are instructions, not hooks, so they hold only as long as
@@ -706,25 +716,26 @@ trabajar, y tres son las que te permiten confiar en el resultado:
 | 2 | Un loop | Volver a llamar al modelo con el resultado, para que un paso lleve al siguiente. | Claude Code |
 | 3 | Memoria | Llevar lo que ya pasó a la llamada siguiente, porque el modelo no guarda nada. | Claude Code |
 | 4 | Contexto | Elegir qué ve el modelo cada vez, porque el repo entero no entra y tampoco ayudaría. | Claude Code |
-| 5 | Un lugar donde trabajar | Un sandbox, para que un comando malo caiga ahí y no en tu máquina. | Claude Code |
+| 5 | Un lugar donde trabajar | Un sandbox, para que un comando malo caiga ahí y no en tu máquina. | Claude Code, hasta donde lo configures |
 | 6 | Un objetivo, y verificación | Saber que está terminado porque algo lo chequeó, no porque el modelo lo dijo. | **Bouncer** |
 | 7 | Permisos y límites | Qué puede hacer solo, qué te tiene que preguntar, y cuándo dejar de intentar. | Claude Code, y Bouncer para el cuándo parar |
 | 8 | Observabilidad | Ver qué pasó de verdad en una corrida. | Nadie acá, mirá abajo |
 | 9 | Evals | Medir si un cambio en el harness mejoró o empeoró las cosas. | Nadie acá, mirá abajo |
 
-Bouncer es la pieza seis, y la mitad de la siete. Ese es todo el alcance. Las
-primeras cinco ya vienen con tu agente, y son la razón de que pueda trabajar. La
-seis es la que no viene de fábrica, porque solo vos sabés qué significa
-"terminado" en tu repo.
+Bouncer es la pieza seis, y la mitad de la siete. Ese es todo el alcance. Cinco
+de esas primeras seis ya vienen con tu agente. La sexta no, porque solo vos
+sabés qué significa "terminado" en tu repo, y ese es el hueco que llena Bouncer.
 
-Las piezas ocho y nueve Bouncer no las hace. Las trazas importan sobre todo
-cuando una corrida no se puede repetir, y una corrida de `make verify` sí:
-mismo código, mismo resultado, así que `make verify` es la traza. Lo que
-realmente faltaba era registro de los momentos en que Bouncer se hace a un lado,
-y eso sí lo lleva: `.bouncer-releases.log` suma una línea cada vez que el gate
-se libera después de tres fallas o se saltea por `.claude/.skip-verify`.
-`make releases` te lo muestra. Las evals, medir un cambio del harness mismo, no
-están cubiertas.
+Las piezas ocho y nueve Bouncer no las hace. Las trazas valen sobre todo cuando
+una corrida no se puede repetir, y un `make verify` que falla sí se puede:
+corrélo de nuevo en la misma máquina y te da lo mismo, con más detalle del que
+un log iba a guardar. Entre máquinas distintas no, y el gate lo dice en voz alta
+cuando pasa: no hay cluster, schemas que no pudo chequear, archivos que git no
+está trackeando. Lo que no se recupera después es el momento en que el gate
+directamente no corrió, así que eso es lo que queda escrito:
+`.bouncer-releases.log` suma una línea cada vez que el gate se libera después de
+tres fallas o se saltea por `.claude/.skip-verify`, y `make releases` te lo
+muestra. Las evals, medir un cambio del harness mismo, no están cubiertas.
 
 Ese mapa de nueve piezas no es nuestro. Sale de [la explicación de harness
 engineering de santi](https://x.com/santtiagom_/status/2098782814837543075), que
@@ -1078,6 +1089,8 @@ Contra una sesión real de Claude Code:
 - `Stop` bloqueando un turno, la liberación al tercer intento, y el contador
   reseteándose.
 - `.claude/.skip-verify` dejando terminar un turno con el gate todavía en rojo.
+- El registro de liberaciones en sus dos caminos, en los dos idiomas, y cayendo
+  a una línea que dice "no se pudo leer" cuando falta el catálogo.
 - El reviewer siguiendo el idioma configurado en los dos sentidos: preguntado en
   castellano y con el default en inglés contestó en inglés, y configurado en
   castellano contestó en castellano.
@@ -1134,6 +1147,12 @@ revisiones más recientes trajeron siete hallazgos, seis reales. El precio es
 tiempo, unos cinco minutos y medio sobre un diff de noventa líneas, la mayor
 parte verificando sus propias afirmaciones, y nada en su frontmatter lo limita.
 Reproducí un hallazgo antes de actuar sobre él, en cualquier caso.
+
+`.bouncer-releases.log` es una nota para vos, no una auditoría. Vive en tu
+working tree, así que cualquier cosa que pueda escribir ahí lo puede editar, el
+agente incluido. Dos sesiones a la vez intercalan líneas que se parecen entre
+sí, y nada rota el archivo: dejá `.claude/.skip-verify` puesto y crece una línea
+por turno.
 
 Nada hace cumplir lo que pide `CLAUDE.md`: el plan, el commit, la review y la
 regla de no pushear. Son instrucciones, no hooks, así que se sostienen solo
