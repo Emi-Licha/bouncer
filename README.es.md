@@ -1,103 +1,124 @@
 # Bouncer
 
-**Tu agente dice que está listo. Bouncer chequea los factos.**
+**Un harness de verificación para trabajo agéntico.**
 
 [Read it in English](README.md)
 
-Porque casi nunca lo está. Leés el diff, encontrás la variable sin comillas,
-prompteás de nuevo, te vuelve a decir que está listo, y ahí se te fue la tarde.
-
-Un prompt mejor no va a arreglar eso, y no es que el modelo sea descuidado. Para
-ver qué está pasando en realidad, conviene saber quién decide que una tarea
-terminó.
-
-## Por qué tu agente cree que terminó
-
-Un modelo hace una sola cosa: entra texto, sale texto. No abre archivos, no
-corre comandos y no se acuerda de lo que hizo hace un minuto.
-
-Así que cuando tu agente busca en tu repo, edita un archivo y corre los tests,
-todo eso lo hace otra cosa. El modelo pide una acción, y esa otra cosa la
-ejecuta. A esa otra cosa se le dice harness. Con Claude Code, Claude es el
-modelo y Claude Code es el harness.
-
-El harness también decide cuándo parar. Por defecto para cuando el modelo dice
-que el trabajo está terminado, y el modelo contesta desde lo que quiso hacer, no
-desde lo que pasó. Todavía nadie chequeó el resultado. El primero que chequea
-sos vos, y por eso la tarde termina como termina.
-
-Bouncer mueve esa decisión a un comando.
-
-## Cómo funciona, una pieza por vez
-
-Pongamos que pediste un helper de reintentos y el agente escribió `retry.sh`.
-
-**Empieza con un comando.** `make verify` corre los linters sobre tus archivos,
-valida tus manifiestos, renderiza tus charts, corre tus tests, y sale con cero o
-no. Un linter es un programa que lee código sin ejecutarlo y se queja de lo que
-está roto o es riesgoso: `shellcheck` es el que te avisa que `echo $name` se
-rompe la primera vez que `$name` tiene un espacio.
-
-Bouncer engancha once, y corre solo lo que aplica. Si no hay Terraform en tu
-repo, no hay checks de Terraform.
-
-**Alguien lo tiene que correr.** Vos lo vas a correr dos veces, y después te vas
-a olvidar. Así que lo corre un hook. Un hook es un comando que el runtime del
-agente dispara solo cuando pasa algo; vos nunca lo llamás. Claude Code ofrece
-varios eventos, y Bouncer usa dos.
-
-**Un hook que solo se queja es decoración.** Lo que le da dientes es el número
-con el que sale. Exit 1 va a un log de debug que el agente no lee nunca. Exit 2
-se le entrega al agente, y en el evento `Stop` bloquea el turno directamente.
-Bouncer usa exit 2.
-
-**Entonces el gate es el hook de `Stop`.** Se dispara cuando el turno está por
-terminar, corre `make verify`, y si eso falla, el turno no termina. La salida le
-cae en el contexto al agente, así que lee la falla y la corrige sin que vos
-escribas nada.
-
-**Igual, esperar al final es tarde.** El agente puede escribir veinte archivos
-antes de que algo mire el primero. Por eso el hook de `PostToolUse` se dispara
-justo después de que cada archivo se edita o se escribe, lintea solo ese
-archivo, y tarda menos de dos segundos. Tu `retry.sh` vuelve con la variable sin
-comillas mientras el agente todavía está en eso.
-
-**Y un gate sin salida es un gate que apagás.** Un check que el agente no puede
-satisfacer generaría un loop infinito, así que después de tres intentos
-fallidos seguidos Bouncer libera el turno, lo dice, y deja la liberación
-escrita.
-
-Ese es todo el mecanismo:
+Bouncer se para en la puerta del trabajo de tu agente. Nada de lo que produce
+pasa sin haber sido chequeado, y lo que falla no termina el turno: vuelve al
+agente con el motivo.
 
 ```text
-    vos: "agregá la lógica de reintento"
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  el agente trabaja, y cada archivo que toca se lintea en    │
-│  el momento. Las quejas le vuelven derecho a él.            │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-    el agente dice que terminó
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  make verify: el gate entero                                │
-│                                                             │
-│  falló ──▶ el turno no termina, el agente arregla y prueba  │
-│            de nuevo (tres veces, después lo suelta)         │
-│  pasó  ──▶ el turno termina                                 │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-    una respuesta que ya pasó el gate
+        ┌───────────┐
+        │  Agente   │  escribe un archivo, y dice que terminó
+        └─────┬─────┘
+              │
+              ▼
+        ┌───────────┐
+        │  Bouncer  │  corre todos los checks que tu repo necesita
+        └─────┬─────┘
+              │
+      ┌───────┴───────┐
+      │               │
+    PASS           BOUNCE
+      │               │
+      ▼               ▼
+  el turno pasa    la falla le vuelve al agente,
+                   que la arregla y prueba de nuevo
+                      │
+                      ▼
+                   tres bounces seguidos, y Bouncer
+                   libera el turno y lo dice
 ```
 
 Un patova no discute si estás en la lista. Estar muy convencido de que estás en
 la lista no te hace entrar. Esa es toda la idea.
 
-## Cómo se ve cuando salta
+## Por qué
+
+Tu agente dice que terminó. Casi nunca es así. Entonces leés el diff, encontrás
+la variable sin comillas, prompteás de nuevo, te vuelve a decir que está listo,
+y ahí se te fue la tarde.
+
+Un prompt mejor no va a arreglar eso, y no es que el modelo sea descuidado. La
+cuestión es quién decide que una tarea terminó.
+
+Un modelo hace una sola cosa: entra texto, sale texto. No abre archivos, no
+corre comandos y no se acuerda de lo que hizo hace un minuto. Cuando tu agente
+busca en tu repo, edita un archivo y corre los tests, esas acciones las ejecuta
+otra cosa. A esa otra cosa se le dice harness, y con Claude Code, Claude es el
+modelo y Claude Code es el harness.
+
+El harness también decide cuándo parar. Por defecto para cuando el modelo dice
+que el trabajo está terminado, y el modelo contesta desde lo que quiso hacer, no
+desde lo que pasó. Todavía nadie chequeó el resultado. El primero que chequea
+sos vos.
+
+Bouncer mueve esa decisión a un comando, y lo pone en la puerta.
+
+## Qué chequea
+
+Bouncer chequea lo que el agente dejó en tu repo, no cómo se comportó en el
+camino. Es un alcance elegido a propósito: un artefacto lo puede chequear un
+programa que da la misma respuesta siempre, y un programa así es lo único que
+vale la pena poner en una puerta.
+
+- un script de shell que se rompe la primera vez que una variable tiene un
+  espacio
+- YAML que no parsea, o un manifiesto de Kubernetes que el cluster rechazaría
+- un chart de Helm que no renderiza, una policy de Kyverno cuyo propio test falla
+- Terraform que no valida, o cuya documentación generada ya no coincide
+- una suite de tests que falla, o cobertura por debajo del piso
+- un secreto a punto de ser commiteado
+
+Once linters y validadores, y corre solo lo que aplica. Si no hay Terraform en
+tu repo, no hay checks de Terraform. Qué cuenta como check lo cambiás vos: son
+herramientas comunes, declaradas en `.pre-commit-config.yaml` y en
+`scripts/verify.sh`, no un lenguaje que Bouncer se inventó.
+
+## El veredicto
+
+Lo produce un comando, `make verify`. Todo lo demás existe para correrlo en el
+momento justo y para actuar según la respuesta.
+
+| Veredicto | Qué pasa |
+| --- | --- |
+| `PASS` | El turno termina. La respuesta que leés ya pasó por el gate. |
+| `BOUNCE` | El turno no termina. La falla le cae en el contexto al agente, y la arregla sin que vos escribas nada. |
+| `RELEASE` | Tres bounces seguidos sobre el mismo problema, así que Bouncer suelta, lo dice, y lo deja escrito. |
+
+El tercero importa tanto como los otros dos. Un check que el agente no puede
+satisfacer generaría un loop infinito, y un gate que te deja encerrado es uno
+que apagás antes del mediodía. Bouncer prefiere hacerse a un lado en voz alta
+antes que tenerte de rehén en silencio, y `make releases` te muestra cada vez
+que lo hizo.
+
+## Qué no es Bouncer
+
+No es un agente, y no intenta hacer el trabajo. No hace más inteligente al
+modelo ni te reescribe los prompts. El modelo sigue haciendo cada arreglo.
+
+Contesta una sola pregunta: ¿esta ejecución dejó el repo en un estado que
+aceptamos?
+
+## Cómo llega hasta ahí
+
+Dos hooks, que son comandos que Claude Code dispara solo. Vos nunca los llamás.
+
+**Mientras el agente trabaja**, `PostToolUse` se dispara después de que cada
+archivo se edita o se escribe, lintea ese archivo solo, y tarda menos de dos
+segundos. La queja le llega al agente mientras todavía está en ese archivo.
+
+**Cuando el turno está por terminar**, `Stop` corre `make verify`, el gate
+entero, y de ahí sale el veredicto.
+
+Lo que le da dientes a un hook es el número con el que sale. Exit 1 va a un log
+de debug que el agente no lee nunca. Exit 2 se le entrega al agente, y en `Stop`
+además bloquea el turno. Bouncer usa exit 2, y
+[cómo funciona](docs/how-it-works.es.md#el-exit-code-es-todo-el-truco) explica
+por qué ese detalle es donde la mayoría de los harnesses falla en silencio.
+
+## Cómo se ve un bounce de verdad
 
 ```text
 === make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
@@ -111,7 +132,8 @@ la lista no te hace entrar. Esa es toda la idea.
         2:4       error    syntax error: mapping values are not allowed here (syntax)
 ```
 
-El agente lee eso y arregla el YAML. Vos nunca ves la ida y vuelta.
+El agente lee eso, arregla el YAML, e intenta terminar el turno de nuevo. Vos
+nunca ves la ida y vuelta: lo que te llega es la respuesta que pasó.
 
 ## Probalo
 
@@ -266,6 +288,24 @@ Probablemente no te sirva si tu agente no es Claude Code, porque el loop depende
 de los hooks de Claude Code; si tu stack es JavaScript, Go, Java o Rust, que
 todavía no tienen linters conectados; o si lo necesitás en Windows, o querés que
 reemplace a tu CI. Corre en tu máquina, y está probado en macOS.
+
+## Roadmap
+
+Bouncer chequea artefactos. Una capa de verificación para sistemas agénticos
+podría chequear más que eso, y estas son las piezas que acá todavía no existen,
+nombradas para que nadie tenga que adivinar:
+
+- **Verificación de tools.** Si se llamó a la tool correcta, con argumentos
+  válidos, y si se salteó un paso que se esperaba.
+- **Métricas de costo y tokens.** Cuánto gastó un turno, y un techo para eso.
+- **Grafos de ejecución.** La forma de una corrida, para distinguir un flujo que
+  se desvió del camino esperado de uno que tomó otra ruta igual de válida.
+- **Evals.** Un conjunto estable de tareas para correr antes y después de tocar
+  el harness, y poder distinguir una mejora de una regresión.
+
+Ninguna está empezada. Las piezas que sí están construidas se describen en
+[cómo funciona](docs/how-it-works.es.md), y qué se corrió para probarlas está en
+[la evidencia](docs/evidence.es.md).
 
 ## Licencia
 

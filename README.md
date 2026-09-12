@@ -1,101 +1,123 @@
 # Bouncer
 
-**Your agent says it's done. Bouncer checks the facts.**
+**A verification harness for agentic coding.**
 
 [Léelo en castellano](README.es.md)
 
-Because it almost never is. You read the diff, you find the unquoted variable,
-you prompt again, it tells you it is done again, and there goes your afternoon.
-
-A better prompt will not fix that, and the model is not being careless. To see
-what is actually going on, it helps to know who decides that a task is finished.
-
-## Why your agent thinks it is done
-
-A model does one thing: text goes in, text comes out. It does not open files, it
-does not run commands, and it does not remember what it did a minute ago.
-
-So when your agent searches your repository, edits a file and runs the tests,
-something else is doing all of that. The model asks for an action, and that
-something carries it out. That something is called the harness. With Claude
-Code, Claude is the model and Claude Code is the harness.
-
-The harness also decides when to stop. By default it stops when the model says
-the work is done, and the model answers from what it meant to do, rather than
-from what happened. Nothing has checked the result yet. You are the first thing
-that checks, which is why the afternoon goes the way it goes.
-
-Bouncer moves that decision to a command.
-
-## How it works, one piece at a time
-
-Say you asked for a retry helper, and the agent wrote `retry.sh`.
-
-**It starts with one command.** `make verify` runs the linters over your files,
-validates your manifests, renders your charts, runs your tests, and exits zero
-or it does not. A linter is a program that reads code without running it and
-complains about what is broken or risky: `shellcheck` is the one that notices
-`echo $name` falls apart the first time `$name` holds a space.
-
-Bouncer wires up eleven of them, and runs only what applies. No Terraform in
-your repository means no Terraform checks.
-
-**Someone has to run it.** You will, twice, and then you will forget. So a hook
-runs it instead. A hook is a command the agent's runtime fires by itself when
-something happens; you never call it. Claude Code offers several events, and
-Bouncer uses two of them.
-
-**A hook that only complains is furniture.** What gives a hook teeth is the
-number it exits with. Exit 1 is written to a debug log the agent never reads.
-Exit 2 is handed to the agent, and on the `Stop` event it blocks the turn
-outright. Bouncer uses exit 2.
-
-**So the gate is the `Stop` hook.** It fires when the turn is about to end, runs
-`make verify`, and if that fails, the turn does not end. The output lands in the
-agent's context, so it reads the failure and fixes it without you typing
-anything.
-
-**Waiting for the end is late**, though. The agent can write twenty files before
-anything looks at the first one. So the `PostToolUse` hook fires right after
-each file is edited or written, lints only that file, and takes under two
-seconds. Your `retry.sh` comes back with its unquoted variable while the agent
-is still on it.
-
-**And a gate with no way out is a gate you turn off.** A check the agent cannot
-satisfy would loop forever, so after three failed attempts in a row Bouncer
-releases the turn, says so, and writes the release down.
-
-That is the whole mechanism:
+Bouncer sits at the door of your agent's work. Nothing the agent produces gets
+through until it has been checked, and what fails does not end the turn: it
+goes back to the agent with the reason.
 
 ```text
-    you: "add the retry logic"
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  the agent works, and every file it touches gets linted     │
-│  on the spot. Complaints go straight back to it.            │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-    the agent says it is done
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│  make verify: the whole gate                                │
-│                                                             │
-│  failed ──▶ the turn does not end, the agent fixes and      │
-│             tries again (three times, then it lets go)      │
-│  passed ──▶ the turn ends                                   │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-    an answer that already passed the gate
+        ┌───────────┐
+        │   Agent   │  writes a file, then says it is done
+        └─────┬─────┘
+              │
+              ▼
+        ┌───────────┐
+        │  Bouncer  │  runs every check your repository needs
+        └─────┬─────┘
+              │
+      ┌───────┴───────┐
+      │               │
+    PASS           BOUNCE
+      │               │
+      ▼               ▼
+  the turn ends    the failure goes back to the agent,
+                   which fixes it and tries again
+                      │
+                      ▼
+                   three bounces in a row, and Bouncer
+                   releases the turn and says so
 ```
 
 A bouncer does not argue about whether you are on the list. Being very confident
 that you are on the list does not get you in. That is the whole idea.
 
-## What it looks like when it fires
+## Why
+
+Your agent says it is done. It almost never is. So you read the diff, you find
+the unquoted variable, you prompt again, it tells you it is done again, and
+there goes your afternoon.
+
+A better prompt will not fix that, and the model is not being careless. It comes
+down to who decides that a task is finished.
+
+A model does one thing: text goes in, text comes out. It does not open files, it
+does not run commands, and it does not remember what it did a minute ago. When
+your agent searches your repository, edits a file and runs the tests, something
+else is carrying those out. That something is called the harness, and with
+Claude Code, Claude is the model and Claude Code is the harness.
+
+The harness also decides when to stop. By default it stops when the model says
+the work is done, and the model answers from what it meant to do, rather than
+from what happened. Nothing has checked the result yet. You are the first thing
+that checks.
+
+Bouncer moves that decision to a command, and puts it at the door.
+
+## What it checks
+
+Bouncer checks what the agent left in your repository, not how it behaved along
+the way. That is a deliberate scope: an artifact can be checked by a program
+that gives the same answer every time, and a program that does is the only thing
+worth putting at a door.
+
+- a shell script that breaks the first time a variable holds a space
+- YAML that does not parse, or a Kubernetes manifest the cluster would reject
+- a Helm chart that does not render, a Kyverno policy whose own test fails
+- Terraform that does not validate, or whose generated docs no longer match
+- a test suite that fails, or coverage under the floor
+- a secret about to be committed
+
+Eleven linters and validators, and it runs only what applies. No Terraform in
+your repository means no Terraform checks. What counts as a check is yours to
+change: they are ordinary tools, declared in `.pre-commit-config.yaml` and in
+`scripts/verify.sh`, not a language Bouncer invented.
+
+## The verdict
+
+One command, `make verify`, produces it. Everything else exists to run that
+command at the right moment and to act on the answer.
+
+| Verdict | What happens |
+| --- | --- |
+| `PASS` | The turn ends. The answer you read has already been through the gate. |
+| `BOUNCE` | The turn does not end. The failure goes into the agent's context, and it fixes it without you typing anything. |
+| `RELEASE` | Three bounces in a row on the same problem, so Bouncer lets go, says so, and writes it down. |
+
+That third one matters as much as the first two. A check the agent cannot
+satisfy would loop forever, and a gate that traps you is a gate you switch off
+by lunchtime. Bouncer would rather step aside loudly than hold you hostage
+quietly, and `make releases` shows you every time it did.
+
+## What Bouncer is not
+
+It is not an agent, and it does not try to do the work. It does not make the
+model smarter and it does not rewrite your prompts. The model still makes every
+fix.
+
+It answers one question: did this execution leave the repository in a state we
+accept?
+
+## How it gets there
+
+Two hooks, which are commands Claude Code fires by itself. You never call them.
+
+**While the agent works**, `PostToolUse` fires after each file is edited or
+written, lints that one file, and takes under two seconds. The complaint reaches
+the agent while it is still on that file.
+
+**When the turn is about to end**, `Stop` runs `make verify`, the whole gate, and
+that is where the verdict comes from.
+
+What gives a hook teeth is the number it exits with. Exit 1 goes to a debug log
+the agent never reads. Exit 2 is handed to the agent, and on `Stop` it blocks
+the turn. Bouncer uses exit 2, and
+[how it works](docs/how-it-works.md#the-exit-code-is-the-whole-trick) explains
+why that one detail is where most harnesses quietly fail.
+
+## A bounce, as it actually looks
 
 ```text
 === make verify FAILED (attempt 1/3): the turn cannot end ===
@@ -109,7 +131,8 @@ that you are on the list does not get you in. That is the whole idea.
         2:4       error    syntax error: mapping values are not allowed here (syntax)
 ```
 
-The agent reads that and fixes the YAML. You never see the round trip.
+The agent reads that, fixes the YAML, and tries to end the turn again. You never
+see the round trip: what reaches you is the answer that got through.
 
 ## Try it
 
@@ -263,6 +286,24 @@ It is probably not for you if your agent is not Claude Code, since the loop
 depends on Claude Code hooks; if your stack is JavaScript, Go, Java or Rust,
 which have no linters wired in yet; or if you need it on Windows, or want it to
 replace CI. It runs on your machine, and it is tested on macOS.
+
+## Roadmap
+
+Bouncer checks artifacts. A verification layer for agentic systems could check
+more than that, and these are the pieces that do not exist here yet, named so
+nobody has to guess:
+
+- **Tool verification.** Whether the right tool was called, with valid
+  arguments, and whether an expected step was skipped.
+- **Cost and token metrics.** What a turn spent, and a ceiling on it.
+- **Execution graphs.** The shape of a run, so a workflow that diverged from the
+  expected path can be told apart from one that took a different valid route.
+- **Evals.** A stable set of tasks to run before and after changing the harness,
+  so an improvement can be told from a regression.
+
+None of these are started. The pieces that are built are described in
+[how it works](docs/how-it-works.md), and what was actually run to test them is
+in [the evidence](docs/evidence.md).
 
 ## License
 
