@@ -11,20 +11,91 @@ Because it almost never is.
 So you read the diff, you find the unquoted variable, you prompt again, it tells
 you it is done again, and there goes your afternoon.
 
-This is not a prompting problem, and a better prompt will not fix it. Nor is it
-the model being careless. What is missing is structure: nothing checks the work
-between the agent saying "done" and you reading it. Bouncer is that structure, a
-harness around your agent. The model still makes every fix. The harness decides
-when the work counts as finished.
+This is not a prompting problem, and a better prompt will not fix it. To see why,
+it helps to know who actually decides that a task is finished.
 
-**Bouncer closes the loop.** The agent acts, a check runs on its own, the
-failure goes straight back into the agent's context, and it corrects without
-being asked. It cannot end the turn, which means handing control back to you,
-until the check passes. If it fails three times in a row, Bouncer lets go and
-says so.
+### Why your agent thinks it is done
 
-What you get out of that is accuracy: whatever a check can catch gets caught,
-without depending on you to notice.
+A model does one thing: text goes in, text comes out. It does not open files, it
+does not run commands, and it does not remember what it did a minute ago.
+
+So when your agent searches your repository, edits a file and runs the tests,
+something else is doing all of that. The model asks; that something executes.
+That something is the harness, and with Claude Code, Claude is the model and
+Claude Code is the harness.
+
+The harness also decides when to stop asking. By default it stops when the model
+says the work is done, and the model answers from what it meant to do, not from
+what happened. Nothing has looked at the result yet. You are the first thing
+that does, which is why the afternoon goes the way it goes.
+
+Bouncer moves that decision to a command.
+
+### One command, and the pieces that make it fire
+
+Say you asked for a retry helper, and the agent wrote `retry.sh`.
+
+**The gate is one command**, and it answers yes or no:
+
+```bash
+make verify
+```
+
+It runs the linters over your files, validates your manifests, renders your
+charts and runs your tests, then exits zero or it does not. A linter is a
+program that reads code without running it and complains about what is broken or
+risky: `shellcheck` is the one that notices `echo $name` falls apart the first
+time `$name` holds a space. Bouncer wires up eleven of them, for shell, YAML,
+Markdown, Dockerfiles, GitHub Actions, Python, Terraform, Kubernetes manifests,
+Helm charts, Kyverno policies, and leaked secrets.
+
+It only runs what applies. No Terraform in your repository means no Terraform
+checks, and adding some next month needs no edit here.
+
+Those fast checks are defined once, in `.pre-commit-config.yaml`, and the gate
+runs them from there. So `make verify` and your `git commit` can never disagree
+about what "clean" means. They also call the binaries `make bootstrap` installed
+rather than fetching their own, so nobody drifts to a different version of
+`shellcheck` than the gate uses.
+
+So far this is a command sitting in a Makefile. Someone still has to run it, and
+after the third time you will stop.
+
+**A hook runs it for you.** A hook is a command the agent's runtime fires by
+itself when something happens. You never call it. Claude Code offers several
+events, and Bouncer uses two of them.
+
+That alone is not enough either, because a hook that reports a problem is easy
+to ignore. What makes a hook matter is the number it exits with:
+
+| The hook exits | What the runtime does |
+| --- | --- |
+| `0` | Fine, carry on. The agent is told nothing. |
+| `1` | Treats it as a non-blocking error and writes it to the debug log. **The agent never sees it.** |
+| `2` | Reads your stderr and puts it in front of the agent. On `Stop`, the turn is blocked outright. |
+
+Build a hook on exit 1 and it will look correct forever while achieving
+absolutely nothing. Bouncer uses exit 2 on both of its hooks.
+
+**The `Stop` hook is the gate.** It fires when the turn is about to end, runs
+`make verify`, and on failure exits 2. The turn does not end. The output goes
+straight back into the agent's context, so it reads the failure and fixes it
+without you typing anything.
+
+Waiting until the end is late, though. The agent can write twenty files before
+anything checks the first one.
+
+**The `PostToolUse` hook shortens that.** It fires right after a file is edited,
+lints only that file, and takes under two seconds. Your `retry.sh` comes back
+with its unquoted variable before the agent has moved on.
+
+One thing is still missing. A check the agent cannot satisfy would loop forever,
+and a gate that traps you is a gate you will switch off by lunchtime. So after
+three failed attempts in a row Bouncer releases the turn and says so out loud,
+and writes a line in `.bouncer-releases.log` so the release is not a thing that
+quietly happens.
+
+That is the whole mechanism. Here it is on one page:
 
 ```text
     you: "add the retry logic"
@@ -71,6 +142,14 @@ without depending on you to notice.
 A double-lined box is enforced by the hooks. A single-lined box is something
 `CLAUDE.md` asks for: the agent follows it, but nothing forces it to.
 
+`CLAUDE.md` is the file your agent reads at the start of every session. Mostly
+it holds one rule: fix the cause, never disable the check. It also asks for a
+review after the commit, by a second agent that reads the finished diff with no
+memory of the conversation that produced it. That reviewer reports and does not
+fix, and nothing gets pushed while it has a critical or high finding open. It is
+not part of the loop, because a check that can answer differently for the same
+code cannot be a gate.
+
 A bouncer does not argue about whether you are on the list. Being extremely
 confident that you are on the list does not get you in. That is the whole idea.
 
@@ -82,7 +161,9 @@ confident that you are on the list does not get you in. That is the whole idea.
 | Checks run when someone remembers to run them. | Checks run as the agent writes files, and again before every turn ends. |
 | A green result you have to take on trust. | `make demo` and `make selftest` show it working on your own machine. |
 
-Here is the Stop hook refusing to let a turn end:
+### What it looks like when it fires
+
+The Stop hook refusing to let a turn end:
 
 ```text
 === make verify FAILED (attempt 1/3): the turn cannot end ===
@@ -110,31 +191,20 @@ echo $undefined_target
      ^---------------^ SC2086 (info): Double quote to prevent globbing and word splitting.
 ```
 
-### What Bouncer is
+### What Bouncer is, and what it is not
 
-**It is a harness, and its shape is a loop.** A harness is the structure you put
-around an agent, not the agent itself. It does not make the model smarter and it
-does not rewrite your prompts. It changes what the model is allowed to call
-finished. The shape is a closed loop: act, check, feed the failure back,
-correct, repeat until it passes. The distinctive part is not what gets checked.
-It is who decides, and that moves from the agent to a command that does not
-negotiate.
+It is a harness, and its shape is a loop: act, check, feed the failure back,
+correct, repeat until it passes. It does not make the model smarter and it does
+not rewrite your prompts. The model still makes every fix. What changes is who
+decides the work is finished, and that moves from the agent to a command that
+does not negotiate.
 
 It is not a library you import, a service you run, a pipeline or a graph. There
 is no orchestration anywhere in it: two events and one command, sitting in your
-repository, changing what your agent is allowed to do.
+repository.
 
-### Where Bouncer sits
-
-A model does one thing: text goes in, text comes out. It does not open files,
-run commands, or remember what it did a minute ago. So when your agent searches
-your repository, edits a file and runs the tests, something else is doing all of
-that. That something is the harness. Everything that is not the model is the
-harness, and when you use Claude Code, Claude is the model and Claude Code is
-the harness.
-
-A harness is usually nine pieces. Six of them are what lets the agent work at
-all, and three are what lets you trust the result:
+A full harness is usually described as nine pieces. Six let the agent work at
+all, and three are what let you trust the result:
 
 | # | The piece | What it is for | Who gives it to you |
 | --- | --- | --- | --- |
@@ -157,11 +227,9 @@ cannot be repeated, and a failing `make verify` can be: run it again on the same
 machine and you get the same output, in more detail than a log would carry. Not
 across machines, though, and the gate says so out loud when it happens: schemas
 it could not check, files git is not tracking. A cluster it cannot reach is the
-same kind of gap, and `make verify-full` is where that one surfaces. What
-cannot be recovered afterwards is the moment the gate did not run at all, so
-that is what gets written down: `.bouncer-releases.log` gets a line every time
-the gate is released after three failures or skipped through
-`.claude/.skip-verify`, and `make releases` prints it. Evals, measuring a change
+same kind of gap, and `make verify-full` is where that one surfaces. What cannot
+be recovered afterwards is the moment the gate did not run at all, so that is
+what gets written down, and `make releases` prints it. Evals, measuring a change
 to the harness itself, are not covered at all.
 
 That nine-piece map is not ours. It comes from [santi's walk-through of harness
@@ -196,57 +264,6 @@ It is probably not for you if:
   box Bouncer would skip your code.
 - **You need it on Windows**, or you want it to replace CI. It is tested on
   macOS, and it runs on your machine, not on a server.
-
-### The cast
-
-Six things, in plain language. If you already know what a linter and a hook are,
-skip to [Try it](#try-it).
-
-**The gate** is `make verify`. One command. It exits zero or it does not.
-Everything else in Bouncer exists either to run it at the right moment, or to
-make its answer worth trusting.
-
-**A linter** is a program that reads code without running it and complains about
-what is wrong or risky. `shellcheck` reads a shell script and points out that
-`echo $name` breaks the first time `$name` holds a space. There is one for
-nearly every kind of file, and Bouncer wires up eleven: shell, YAML, Markdown,
-Dockerfiles, GitHub Actions workflows, Python, Terraform, Kubernetes manifests,
-Helm charts, Kyverno policies, and a scanner that hunts for leaked secrets.
-
-**A hook** is a command the agent's runtime runs by itself when something
-happens. You never call it. It fires. Claude Code offers several events; Bouncer
-uses two. `PostToolUse` fires right after a file is edited or written, and lints
-just that file. `Stop` fires when the turn is about to end, and runs the gate.
-The runtime hands the hook some JSON on standard input, and then reads the
-hook's **exit code** to decide what happens next. That exit code is where all
-the leverage lives, and where nearly everyone gets it wrong:
-
-| The hook exits | What the runtime does |
-| --- | --- |
-| `0` | Fine, carry on. The agent is told nothing. |
-| `1` | Treats it as a non-blocking error and writes it to the debug log. **The agent never sees it.** |
-| `2` | Reads your stderr and puts it in front of the agent. On `Stop`, the turn is blocked outright. |
-
-Build a hook on exit 1 and it will look correct forever while achieving
-absolutely nothing. Bouncer uses exit 2 on both.
-
-**`pre-commit`** is an off-the-shelf tool that runs a list of checks over your
-files. Bouncer uses it as the single place the fast checks are defined, so
-`make verify` and your git commit can never disagree about what "clean" means.
-Those linters are declared `repo: local`, meaning they call the same binaries
-`make bootstrap` installed, so they cannot quietly drift to a different version.
-
-**The reviewer** is a second agent that reads the finished diff with no memory
-of the conversation that produced it. It cannot see how anyone talked themselves
-into a decision, which is exactly the point. It reports. It does not fix.
-
-It is not part of the loop. The agent runs it after the commit because
-`CLAUDE.md` tells it to, and nothing gets pushed while it has a critical or high
-finding open. A check that can answer differently for the same code cannot be a
-gate, so the reviewer stays a second opinion.
-
-And **`CLAUDE.md`** holds the rules your agent reads at the start of every
-session. Mostly one rule: fix the cause, never disable the check.
 
 ### Try it
 
@@ -455,9 +472,9 @@ The documentation check for Terraform is opt-in twice over. It runs only where a
 `.terraform-docs.yml` sets an output file, found the way terraform-docs finds
 it: the module, the module's `.config/`, the root, the root's `.config/`, and
 last `~/.tfdocs.d`, which is outside the repository. A config there drives the
-check on your machine and on nobody else's, CI included. And then only on modules where that file carries the
-`BEGIN_TF_DOCS` marker, so a directory without it, such as a usage example, is
-left alone.
+check on your machine and on nobody else's, CI included. And then only on
+modules where that file carries the `BEGIN_TF_DOCS` marker, so a directory
+without it, such as a usage example, is left alone.
 
 Bouncer reads that output file with a small parser that understands the usual
 block style. A config that writes `output:` as a one-line `{file: ...}` map is
@@ -591,19 +608,92 @@ Porque casi nunca lo está.
 Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo,
 te vuelve a decir que está listo, y ahí se te fue la tarde.
 
-Esto no es un problema de prompts, y promptear mejor no lo arregla. Tampoco es
-que el modelo sea descuidado. Lo que falta es estructura: nada chequea el
-trabajo entre que el agente dice "listo" y vos lo leés. Bouncer es esa
-estructura, un harness alrededor de tu agente. Los arreglos los sigue haciendo
-el modelo. El harness decide cuándo el trabajo cuenta como terminado.
+Esto no es un problema de prompting, y un prompt mejor no lo va a arreglar. Para
+ver por qué, conviene saber quién decide de verdad que una tarea terminó.
 
-**Bouncer cierra el loop.** El agente actúa, un chequeo corre solo, la falla
-vuelve derecho a su contexto, y corrige sin que se lo pidas. No puede terminar
-el turno, o sea devolverte el control, hasta que el chequeo pase. Si falla tres
-veces seguidas, Bouncer lo suelta y lo avisa.
+### Por qué tu agente cree que terminó
 
-Lo que ganás con eso es precisión: lo que un chequeo puede atrapar queda
-atrapado, sin depender de que vos te des cuenta.
+Un modelo hace una sola cosa: entra texto, sale texto. No abre archivos, no corre
+comandos y no se acuerda de lo que hizo hace un minuto.
+
+Así que cuando tu agente busca en tu repo, edita un archivo y corre los tests,
+todo eso lo hace otra cosa. El modelo pide; esa otra cosa ejecuta. Esa otra cosa
+es el harness, y con Claude Code, Claude es el modelo y Claude Code es el
+harness.
+
+El harness también decide cuándo dejar de preguntar. Por defecto deja de
+preguntar cuando el modelo dice que el trabajo está terminado, y el modelo
+contesta desde lo que quiso hacer, no desde lo que pasó. Todavía nadie miró el
+resultado. El primero que lo mira sos vos, y por eso la tarde termina como
+termina.
+
+Bouncer mueve esa decisión a un comando.
+
+### Un comando, y las piezas que lo disparan
+
+Pongamos que pediste un helper de reintentos y el agente escribió `retry.sh`.
+
+**El gate es un comando**, y contesta que sí o que no:
+
+```bash
+make verify
+```
+
+Corre los linters sobre tus archivos, valida tus manifiestos, renderiza tus
+charts y corre tus tests, y después sale con cero o no. Un linter es un programa
+que lee código sin ejecutarlo y se queja de lo que está roto o es riesgoso:
+`shellcheck` es el que te avisa que `echo $name` se rompe la primera vez que
+`$name` tiene un espacio. Bouncer engancha once, para shell, YAML, Markdown,
+Dockerfiles, GitHub Actions, Python, Terraform, manifiestos de Kubernetes,
+charts de Helm, policies de Kyverno, y secretos filtrados.
+
+Corre solo lo que aplica. Si no hay Terraform en tu repo, no hay checks de
+Terraform, y si el mes que viene agregás, acá no hay que tocar nada.
+
+Esos checks rápidos están definidos en un solo lugar, `.pre-commit-config.yaml`,
+y el gate los corre de ahí. Así `make verify` y tu `git commit` nunca pueden
+estar en desacuerdo sobre qué significa "limpio". Además llaman a los binarios
+que instaló `make bootstrap` en vez de bajarse los suyos, así que nadie termina
+usando un `shellcheck` distinto del que usa el gate.
+
+Hasta acá esto es un comando viviendo en un Makefile. Alguien lo tiene que
+correr, y a la tercera vez vos ya no lo corrés más.
+
+**Un hook lo corre por vos.** Un hook es un comando que el runtime del agente
+dispara solo cuando pasa algo. Vos nunca lo llamás. Claude Code ofrece varios
+eventos, y Bouncer usa dos.
+
+Con eso solo tampoco alcanza, porque un hook que informa un problema es fácil de
+ignorar. Lo que hace que un hook pese es el número con el que sale:
+
+| El hook sale con | Qué hace el runtime |
+| --- | --- |
+| `0` | Todo bien, seguí. Al agente no se le dice nada. |
+| `1` | Lo toma como un error no bloqueante y lo escribe en el log de debug. **El agente nunca lo ve.** |
+| `2` | Lee tu stderr y se lo pone adelante al agente. En `Stop`, además, el turno queda bloqueado. |
+
+Armá un hook sobre exit 1 y va a parecer correcto para siempre, sin lograr
+absolutamente nada. Bouncer usa exit 2 en los dos.
+
+**El hook de `Stop` es el gate.** Se dispara cuando el turno está por terminar,
+corre `make verify`, y si falla sale con 2. El turno no termina. La salida le
+vuelve derecho al contexto del agente, así que lee la falla y la corrige sin que
+vos escribas nada.
+
+Igual, esperar hasta el final es tarde. El agente puede escribir veinte archivos
+antes de que algo chequee el primero.
+
+**El hook de `PostToolUse` acorta eso.** Se dispara justo después de editar un
+archivo, lintea solo ese archivo, y tarda menos de dos segundos. Tu `retry.sh`
+vuelve con la variable sin comillas antes de que el agente siga para otro lado.
+
+Falta una cosa más. Un check que el agente no puede satisfacer generaría un loop
+infinito, y un gate que te deja encerrado es un gate que vas a apagar antes del
+mediodía. Así que después de tres intentos fallidos seguidos Bouncer libera el
+turno y lo dice en voz alta, y escribe una línea en `.bouncer-releases.log` para
+que esa liberación no sea algo que pasó calladito.
+
+Ese es todo el mecanismo. Acá está en una sola página:
 
 ```text
     vos: "agregá la lógica de reintento"
@@ -650,18 +740,28 @@ atrapado, sin depender de que vos te des cuenta.
 Una caja de línea doble la hacen cumplir los hooks. Una de línea simple es algo
 que pide `CLAUDE.md`: el agente lo sigue, pero nada lo obliga.
 
-Un patovica no discute si estás en la lista. Estar muy convencido de que estás
-en la lista no te hace entrar. Esa es toda la idea.
+`CLAUDE.md` es el archivo que tu agente lee al empezar cada sesión. Básicamente
+tiene una regla: arreglá la causa, nunca deshabilites el check. También pide una
+revisión después del commit, hecha por un segundo agente que lee el diff
+terminado sin memoria de la conversación que lo produjo. Ese reviewer reporta y
+no arregla, y no se pushea nada mientras tenga un hallazgo crítico o alto
+abierto. No es parte del loop, porque un chequeo que puede responder distinto
+para el mismo código no puede ser un gate.
+
+Un patova no discute si estás en la lista. Estar muy convencido de que estás en
+la lista no te hace entrar. Esa es toda la idea.
 
 | Sin Bouncer | Con Bouncer |
 | --- | --- |
-| El agente dice que está listo y descubrís que no. | No puede terminar el turno hasta que `make verify` pase, o hasta que falle tres veces y lo avise. |
-| Vos sos el linter, leyendo cada diff. | La queja del linter le cae sola en el contexto al agente. |
-| "Arreglá los errores de lint", prompt tras prompt. | Los arregla antes de que veas la respuesta. |
-| Los checks corren cuando alguien se acuerda de correrlos. | Corren a medida que el agente escribe archivos, y otra vez antes de que termine cada turno. |
+| El agente dice que terminó, y te enterás después de que no. | No puede terminar el turno hasta que `make verify` pase, o hasta que fallen tres intentos y lo diga. |
+| El linter sos vos, leyendo cada diff. | La queja del linter le llega sola al contexto del agente. |
+| "Por favor arreglá los errores de lint", prompt tras prompt. | Los arregla antes de que veas la respuesta. |
+| Los checks corren cuando alguien se acuerda de correrlos. | Corren mientras el agente escribe archivos, y de nuevo antes de que termine cada turno. |
 | Un verde que te tenés que creer. | `make demo` y `make selftest` te lo muestran andando en tu máquina. |
 
-Así se ve el hook de Stop negándose a dejar terminar un turno:
+### Cómo se ve cuando salta
+
+El hook de Stop negándose a dejar terminar un turno:
 
 ```text
 === make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
@@ -689,29 +789,20 @@ echo $undefined_target
      ^---------------^ SC2086 (info): Double quote to prevent globbing and word splitting.
 ```
 
-### Qué es Bouncer
+### Qué es Bouncer, y qué no
 
-**Es un harness, y tiene forma de loop.** Un harness es la estructura que ponés
-alrededor de un agente, no el agente en sí. No hace más inteligente al modelo ni
-te reescribe los prompts. Cambia lo que el modelo tiene permitido dar por
-terminado. La forma es un loop cerrado: actuar, chequear, devolver la falla,
-corregir, repetir hasta que pase. Lo distintivo no es qué se chequea. Es quién
-decide, y eso pasa del agente a un comando que no negocia.
+Es un harness, y tiene forma de loop: actuar, chequear, devolver la falla,
+corregir, repetir hasta que pase. No hace más inteligente al modelo ni te
+reescribe los prompts. El modelo sigue haciendo cada arreglo. Lo que cambia es
+quién decide que el trabajo está terminado, y eso pasa del agente a un comando
+que no negocia.
 
 No es una librería que importás, ni un servicio que corrés, ni un pipeline, ni
 un graph. No hay orquestación en ningún lado: dos eventos y un comando, viviendo
-en tu repo, cambiando lo que tu agente tiene permitido hacer.
+en tu repo.
 
-### Dónde entra Bouncer
-
-Un modelo hace una sola cosa: entra texto, sale texto. No abre archivos, no corre
-comandos y no se acuerda de lo que hizo hace un minuto. Así que cuando tu agente
-busca en tu repo, edita un archivo y corre los tests, todo eso lo hace otra cosa.
-Esa otra cosa es el harness. Todo lo que no es el modelo es el harness, y cuando
-usás Claude Code, Claude es el modelo y Claude Code es el harness.
-
-Un harness suele ser nueve piezas. Seis son las que le permiten al agente
-trabajar, y tres son las que te permiten confiar en el resultado:
+Un harness completo se suele describir como nueve piezas. Seis le permiten al
+agente trabajar, y tres son las que te permiten confiar en el resultado:
 
 | # | La pieza | Para qué está | Quién te la da |
 | --- | --- | --- | --- |
@@ -736,10 +827,8 @@ un log iba a guardar. Entre máquinas distintas no, y el gate lo dice en voz alt
 cuando pasa: schemas que no pudo chequear, archivos que git no está trackeando.
 Un cluster al que no llega es la misma clase de hueco, y ese aparece en
 `make verify-full`. Lo que no se recupera después es el momento en que el gate
-directamente no corrió, así que eso es lo que queda escrito:
-`.bouncer-releases.log` suma una línea cada vez que el gate se libera después de
-tres fallas o se saltea por `.claude/.skip-verify`, y `make releases` te lo
-muestra. Las evals, medir un cambio del harness mismo, no están cubiertas.
+directamente no corrió, así que eso es lo que queda escrito, y `make releases`
+te lo muestra. Las evals, medir un cambio del harness mismo, no están cubiertas.
 
 Ese mapa de nueve piezas no es nuestro. Sale de [la explicación de harness
 engineering de santi](https://x.com/santtiagom_/status/2098782814837543075), que
@@ -772,60 +861,6 @@ Probablemente no es para vos si:
   como viene Bouncer se saltearía tu código.
 - **Lo necesitás en Windows**, o querés que reemplace a tu CI. Está probado en
   macOS y corre en tu máquina, no en un servidor.
-
-### El elenco
-
-Seis cosas, en palabras simples. Si ya sabés qué es un linter y qué es un hook,
-saltá a [Probalo](#probalo).
-
-**El gate** es `make verify`. Un comando. Sale con cero o no sale con cero. Todo
-lo demás en Bouncer existe para correrlo en el momento justo, o para que su
-respuesta valga algo.
-
-**Un linter** es un programa que lee código sin ejecutarlo y se queja de lo que
-está mal o es riesgoso. `shellcheck` lee un script de shell y te marca que
-`echo $name` se rompe la primera vez que `$name` tenga un espacio. Hay uno para
-casi cada tipo de archivo, y Bouncer conecta once: shell, YAML, Markdown,
-Dockerfiles, workflows de GitHub Actions, Python, Terraform, manifiestos de
-Kubernetes, charts de Helm, policies de Kyverno, y un escáner que busca secretos
-filtrados.
-
-**Un hook** es un comando que el runtime del agente corre por su cuenta cuando
-pasa algo. Vos nunca lo llamás. Se dispara. Claude Code ofrece varios eventos;
-Bouncer usa dos. `PostToolUse` se dispara justo después de que se edita o se
-escribe un archivo, y lintea solo ese archivo. `Stop` se dispara cuando el turno
-está por terminar, y corre el gate. El runtime le pasa al hook un JSON por
-entrada estándar, y después lee el **código de salida** del hook para decidir
-qué hacer. Ese código de salida es donde está toda la palanca, y donde casi todo
-el mundo se equivoca:
-
-| El hook sale con | Qué hace el runtime |
-| --- | --- |
-| `0` | Todo bien, seguí. Al agente no se le dice nada. |
-| `1` | Lo toma como error no bloqueante y lo escribe en el log de debug. **El agente nunca lo ve.** |
-| `2` | Lee tu stderr y se lo pone adelante al agente. En `Stop`, además le frena el turno. |
-
-Armá un hook sobre exit 1 y va a parecer correcto para siempre sin lograr
-absolutamente nada. Bouncer usa exit 2 en los dos.
-
-**`pre-commit`** es una herramienta ya hecha que corre una lista de chequeos
-sobre tus archivos. Bouncer la usa como el único lugar donde se definen los
-checks rápidos, así `make verify` y tu commit de git nunca pueden estar en
-desacuerdo sobre qué significa "limpio". Esos linters están declarados como
-`repo: local`, o sea que llaman a los mismos binarios que instaló
-`make bootstrap`, así que no pueden derivar en silencio a otra versión.
-
-**El reviewer** es un segundo agente que lee el diff terminado sin memoria de la
-conversación que lo produjo. No puede ver cómo alguien se convenció a sí mismo
-de una decisión, que es exactamente el punto. Reporta. No arregla.
-
-No es parte del loop. El agente lo corre después del commit porque `CLAUDE.md`
-se lo pide, y no se pushea nada mientras tenga un hallazgo crítico o alto
-abierto. Un chequeo que puede responder distinto para el mismo código no puede
-ser un gate, así que el reviewer queda como segunda opinión.
-
-Y **`CLAUDE.md`** tiene las reglas que tu agente lee al empezar cada sesión.
-Básicamente una: arreglá la causa, nunca deshabilites el check.
 
 ### Probalo
 
@@ -1036,9 +1071,9 @@ El chequeo de documentación de Terraform es doblemente opcional. Corre solo
 donde un `.terraform-docs.yml` define un archivo de salida, buscado igual que lo
 busca terraform-docs: el módulo, el `.config/` del módulo, la raíz, el `.config/`
 de la raíz, y por último `~/.tfdocs.d`, que está fuera del repo. Una config ahí
-maneja el chequeo en tu máquina y en la de nadie más, CI incluido. Y aun así solo sobre los módulos
-donde ese archivo tenga el marcador `BEGIN_TF_DOCS`, así que un directorio sin
-él, como un ejemplo de uso, queda afuera.
+maneja el chequeo en tu máquina y en la de nadie más, CI incluido. Y aun así
+solo sobre los módulos donde ese archivo tenga el marcador `BEGIN_TF_DOCS`, así
+que un directorio sin él, como un ejemplo de uso, queda afuera.
 
 Bouncer lee ese archivo de salida con un parser chico que entiende el estilo en
 bloque de siempre. Una config que escribe `output:` como un mapa en una línea,
