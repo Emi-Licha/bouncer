@@ -124,6 +124,48 @@ It is not a library you import, a service you run, a pipeline or a graph. There
 is no orchestration anywhere in it: two events and one command, sitting in your
 repository, changing what your agent is allowed to do.
 
+### Where Bouncer sits
+
+A model does one thing: text goes in, text comes out. It does not open files,
+run commands, or remember what it did a minute ago. So when your agent searches
+your repository, edits a file and runs the tests, something else is doing all of
+that. That something is the harness. Everything that is not the model is the
+harness, and when you use Claude Code, Claude is the model and Claude Code is
+the harness.
+
+A harness is usually nine pieces. Six of them are what lets the agent work at
+all, and three are what lets you trust the result:
+
+| # | The piece | What it is for | Who gives it to you |
+| --- | --- | --- | --- |
+| 1 | Tools | Searching, reading, editing, running commands. The model asks; the harness executes. | Claude Code |
+| 2 | A loop | Calling the model again with the result, so one step leads to the next. | Claude Code |
+| 3 | Memory | Carrying what already happened into the next call, since the model keeps nothing. | Claude Code |
+| 4 | Context | Choosing what the model sees each time, because the whole repository does not fit and would not help. | Claude Code |
+| 5 | A place to work | A sandbox, so a bad command lands there and not on your machine. | Claude Code |
+| 6 | A goal, and verification | Knowing the work is done because something checked, not because the model said so. | **Bouncer** |
+| 7 | Permissions and limits | What it may do on its own, what it must ask about, and when to stop trying. | Claude Code, and Bouncer for the stopping |
+| 8 | Observability | Seeing what actually happened on a run. | Nobody here, see below |
+| 9 | Evals | Measuring whether a change to the harness helped or hurt. | Nobody here, see below |
+
+Bouncer is piece six, and half of piece seven. That is the whole scope. The
+first five come with your agent already, and they are the reason it can work at
+all. Piece six is the one nothing ships by default, because only you know what
+"done" means in your repository.
+
+Pieces eight and nine, Bouncer does not do. Traces matter most when a run cannot
+be repeated, and a run of `make verify` can: same code, same result, so `make
+verify` is the trace. What is genuinely missing is a record of the moments
+Bouncer steps aside, and it keeps one: `.bouncer-releases.log` gets a line every
+time the gate is released after three failures or skipped through
+`.claude/.skip-verify`. `make releases` prints it. Evals, measuring a change to
+the harness itself, are not covered at all.
+
+That nine-piece map is not ours. It comes from [santi's walk-through of harness
+engineering](https://x.com/santtiagom_/status/2098782814837543075), which builds
+a harness from nothing one piece at a time, and explains the parts around
+Bouncer better than a README has room to.
+
 ### Who it is for
 
 - **You use Claude Code every day** and you are tired of the second prompt, the
@@ -278,7 +320,7 @@ cp -R /path/to/bouncer/examples .
 **3. Keep Bouncer's scratch files out of git.**
 
 ```bash
-printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n' >> .gitignore
+printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n.bouncer-releases.log\n' >> .gitignore
 ```
 
 **4. Install the tools and the git hook, then track the new files.**
@@ -335,6 +377,7 @@ anything is a gate you do not have.
 | `make verify-full` | Adds a server-side dry run against a live cluster. |
 | `make demo` | Proves the gate still catches things. |
 | `make selftest` | Proves the gate still accepts good things. |
+| `make releases` | Every time the gate stepped aside: released after three failures, or skipped through `.claude/.skip-verify`. |
 | `make doctor` | Which tools you have and which you are missing. |
 | `make bootstrap` | Installs them. |
 | `make lang` | Which language Bouncer is speaking. |
@@ -646,6 +689,48 @@ No es una librería que importás, ni un servicio que corrés, ni un pipeline, n
 un graph. No hay orquestación en ningún lado: dos eventos y un comando, viviendo
 en tu repo, cambiando lo que tu agente tiene permitido hacer.
 
+### Dónde entra Bouncer
+
+Un modelo hace una sola cosa: entra texto, sale texto. No abre archivos, no corre
+comandos y no se acuerda de lo que hizo hace un minuto. Así que cuando tu agente
+busca en tu repo, edita un archivo y corre los tests, todo eso lo hace otra cosa.
+Esa otra cosa es el harness. Todo lo que no es el modelo es el harness, y cuando
+usás Claude Code, Claude es el modelo y Claude Code es el harness.
+
+Un harness suele ser nueve piezas. Seis son las que le permiten al agente
+trabajar, y tres son las que te permiten confiar en el resultado:
+
+| # | La pieza | Para qué está | Quién te la da |
+| --- | --- | --- | --- |
+| 1 | Tools | Buscar, leer, editar, correr comandos. El modelo pide; el harness ejecuta. | Claude Code |
+| 2 | Un loop | Volver a llamar al modelo con el resultado, para que un paso lleve al siguiente. | Claude Code |
+| 3 | Memoria | Llevar lo que ya pasó a la llamada siguiente, porque el modelo no guarda nada. | Claude Code |
+| 4 | Contexto | Elegir qué ve el modelo cada vez, porque el repo entero no entra y tampoco ayudaría. | Claude Code |
+| 5 | Un lugar donde trabajar | Un sandbox, para que un comando malo caiga ahí y no en tu máquina. | Claude Code |
+| 6 | Un objetivo, y verificación | Saber que está terminado porque algo lo chequeó, no porque el modelo lo dijo. | **Bouncer** |
+| 7 | Permisos y límites | Qué puede hacer solo, qué te tiene que preguntar, y cuándo dejar de intentar. | Claude Code, y Bouncer para el cuándo parar |
+| 8 | Observabilidad | Ver qué pasó de verdad en una corrida. | Nadie acá, mirá abajo |
+| 9 | Evals | Medir si un cambio en el harness mejoró o empeoró las cosas. | Nadie acá, mirá abajo |
+
+Bouncer es la pieza seis, y la mitad de la siete. Ese es todo el alcance. Las
+primeras cinco ya vienen con tu agente, y son la razón de que pueda trabajar. La
+seis es la que no viene de fábrica, porque solo vos sabés qué significa
+"terminado" en tu repo.
+
+Las piezas ocho y nueve Bouncer no las hace. Las trazas importan sobre todo
+cuando una corrida no se puede repetir, y una corrida de `make verify` sí:
+mismo código, mismo resultado, así que `make verify` es la traza. Lo que
+realmente faltaba era registro de los momentos en que Bouncer se hace a un lado,
+y eso sí lo lleva: `.bouncer-releases.log` suma una línea cada vez que el gate
+se libera después de tres fallas o se saltea por `.claude/.skip-verify`.
+`make releases` te lo muestra. Las evals, medir un cambio del harness mismo, no
+están cubiertas.
+
+Ese mapa de nueve piezas no es nuestro. Sale de [la explicación de harness
+engineering de santi](https://x.com/santtiagom_/status/2098782814837543075), que
+arma un harness desde cero pieza por pieza, y explica lo que rodea a Bouncer
+mejor de lo que entra en un README.
+
 ### A quién le sirve
 
 - **Usás Claude Code todos los días** y te cansaste del segundo prompt, el de
@@ -803,7 +888,7 @@ cp -R /ruta/a/bouncer/examples .
 **3. Dejá los archivos temporales de Bouncer fuera de git.**
 
 ```bash
-printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n' >> .gitignore
+printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n.bouncer-releases.log\n' >> .gitignore
 ```
 
 **4. Instalá las herramientas y el hook de git, y trackeá los archivos nuevos.**
@@ -861,6 +946,7 @@ que nunca viste bloquear nada es un gate que no tenés.
 | `make verify-full` | Agrega un dry run server-side contra un cluster real. |
 | `make demo` | Prueba que el gate sigue atrapando cosas. |
 | `make selftest` | Prueba que el gate sigue aceptando lo bueno. |
+| `make releases` | Cada vez que el gate se hizo a un lado: liberado tras tres fallas, o salteado por `.claude/.skip-verify`. |
 | `make doctor` | Qué herramientas tenés y cuáles te faltan. |
 | `make bootstrap` | Las instala. |
 | `make lang` | En qué idioma está hablando Bouncer. |
