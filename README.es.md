@@ -10,25 +10,30 @@ vuelve al agente con el motivo de la falla.
 
 ```text
         ┌───────────┐
-        │  Agente   │  escribe un archivo, y dice que terminó
+        │    Vos    │  le pedís algo
         └─────┬─────┘
               │
               ▼
         ┌───────────┐
-        │  Bouncer  │  corre todos los checks que tu repo necesita
-        └─────┬─────┘
-              │
-      ┌───────┴───────┐
-      │               │
-    PASS           BOUNCE
-      │               │
-      ▼               ▼
-  el turno pasa    la falla le vuelve al agente,
-                   que la arregla y prueba de nuevo
-                      │
-                      ▼
-                   tres bounces seguidos, y Bouncer
-                   te lo escala y lo dice
+        │  Agente   │◀──────────────────────────────────────────┐
+        └─────┬─────┘  hace el trabajo, y dice que terminó      │
+              │                                                 │
+              ▼                                                 │
+        ┌───────────┐                                           │
+        │  Bouncer  │  corre los checks que tu repo necesita    │
+        └─────┬─────┘                                           │
+              │                                                 │
+      ┌───────┼──────────────┐                                  │
+      │       │              │                                  │
+    PASS  ESCALATE        BOUNCE ───────────────────────────────┘
+      │       │           con la falla
+      ▼       ▼
+  ┌───────────────────┐
+  │        Vos        │
+  └───────────────────┘
+
+  PASS      la respuesta te llega, ya pasó por el gate
+  ESCALATE  tres bounces seguidos: el gate sigue en rojo, y decidís vos
 ```
 
 Un patova no discute si estás o no en la lista. Y estar muy convencido de que

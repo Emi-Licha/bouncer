@@ -10,25 +10,30 @@ it goes back to the agent with the reason it failed.
 
 ```text
         ┌───────────┐
-        │   Agent   │  writes a file, then says it is done
+        │    You    │  you ask for something
         └─────┬─────┘
               │
               ▼
         ┌───────────┐
-        │  Bouncer  │  runs every check your repository needs
-        └─────┬─────┘
-              │
-      ┌───────┴───────┐
-      │               │
-    PASS           BOUNCE
-      │               │
-      ▼               ▼
-  the turn ends    the failure goes back to the agent,
-                   which fixes it and tries again
-                      │
-                      ▼
-                   three bounces in a row, and Bouncer
-                   escalates to you and says so
+        │   Agent   │◀──────────────────────────────────────────┐
+        └─────┬─────┘  does the work, then says it is done      │
+              │                                                 │
+              ▼                                                 │
+        ┌───────────┐                                           │
+        │  Bouncer  │  runs every check your repo needs         │
+        └─────┬─────┘                                           │
+              │                                                 │
+      ┌───────┼──────────────┐                                  │
+      │       │              │                                  │
+    PASS  ESCALATE        BOUNCE ───────────────────────────────┘
+      │       │           with the failure
+      ▼       ▼
+  ┌───────────────────┐
+  │        You        │
+  └───────────────────┘
+
+  PASS      the answer reaches you, already through the gate
+  ESCALATE  three bounces in a row: the gate is still red, and it is your call
 ```
 
 A bouncer does not argue about whether you are on the list or not. And being
