@@ -59,10 +59,10 @@ whether the work gets through.
 
 ## What it checks
 
-Bouncer checks what the agent left in your repository, not how it behaved along
-the way. That is a deliberate scope: an artifact can be checked by a program
-that gives the same answer every time, and a program that does is the only thing
-worth putting at a door.
+Bouncer looks at what was actually written to your repository, not at what the
+agent says it did. It runs it through the same tools you would use (linters,
+validators and tests), which give the same answer every time for the same file.
+That is how it catches things like:
 
 - a shell script that breaks the first time a variable holds a space
 - YAML that does not parse, or a Kubernetes manifest the cluster would reject

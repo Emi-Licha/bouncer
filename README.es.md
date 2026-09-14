@@ -57,10 +57,10 @@ decide si el trabajo pasa.
 
 ## Qué chequea
 
-Bouncer chequea lo que el agente dejó en tu repo, no cómo se comportó en el
-camino. Es un alcance elegido a propósito: un artefacto lo puede chequear un
-programa que da la misma respuesta siempre, y un programa así es lo único que
-vale la pena poner en una puerta.
+Bouncer mira lo que quedó escrito en tu repo, no lo que el agente dice que hizo.
+Lo pasa por las mismas herramientas que usarías vos (linters, validadores y
+tests), que para el mismo archivo dan siempre la misma respuesta. Así atrapa
+cosas como:
 
 - un script de shell que se rompe la primera vez que una variable tiene un
   espacio
