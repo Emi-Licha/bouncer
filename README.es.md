@@ -299,10 +299,12 @@ preferencia personal nunca tienen que pelearse.
 - **Estás armando tu propio harness de verificación**, y querés la semántica de
   los exit codes y las trampas escritas por alguien que ya cayó en ellas.
 
-Probablemente no te sirva si tu agente no es Claude Code, porque el loop depende
-de los hooks de Claude Code; si tu stack es JavaScript, Go, Java o Rust, que
-todavía no tienen linters conectados; o si lo necesitás en Windows, o querés que
-reemplace a tu CI. Corre en tu máquina, y está probado en macOS.
+Probablemente no te sirva si:
+
+- **Tu agente no es Claude Code.** El loop depende de los hooks de Claude Code.
+- **Tu stack es JavaScript, Go, Java o Rust.** Todavía no hay linters conectados
+  para esos lenguajes.
+- **Lo necesitás en Windows.** Por ahora está probado solo en macOS.
 
 ## Licencia
 

@@ -300,10 +300,12 @@ preference never have to fight.
 - **You are building your own verification harness**, and want the exit-code
   semantics and the traps written down by someone who hit them.
 
-It is probably not for you if your agent is not Claude Code, since the loop
-depends on Claude Code hooks; if your stack is JavaScript, Go, Java or Rust,
-which have no linters wired in yet; or if you need it on Windows, or want it to
-replace CI. It runs on your machine, and it is tested on macOS.
+It is probably not for you if:
+
+- **Your agent is not Claude Code.** The loop depends on Claude Code hooks.
+- **Your stack is JavaScript, Go, Java or Rust.** No linters are wired in for
+  those languages yet.
+- **You need it on Windows.** For now it is tested only on macOS.
 
 ## License
 
