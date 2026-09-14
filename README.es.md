@@ -4,128 +4,113 @@
 
 [Read it in English](README.md)
 
-Bouncer se para en la puerta del trabajo de tu agente. Nada de lo que produce
-tu agente pasa sin haber sido chequeado, y lo que falla no termina el turno:
-vuelve al agente con el motivo de la falla.
+Tu agente dice que terminó.
+
+Mirás el diff.
+
+Algo está mal.
+
+Así que le escribís de nuevo:
+
+> "Los tests están fallando. Arreglalos."
+
+Los arregla.
+
+Y otra vez dice que terminó.
+
+Chequeás.
+
+Hay otra cosa rota.
+
+Así que le escribís de nuevo.
+
+Esta es la parte del trabajo con agentes que se siente extrañamente manual: el
+agente puede hacer el trabajo, pero el que decide si está realmente terminado
+seguís siendo vos.
+
+Ese no debería ser tu trabajo.
+
+El repo ya sabe cómo chequear casi todo esto:
+
+- Los linters saben si la sintaxis es válida.
+- Los tests saben si el código funciona.
+- Terraform sabe si su configuración es válida.
+- Helm sabe si un chart renderiza.
+- Los schemas de Kubernetes dicen si un manifiesto es válido.
+
+Las herramientas ya existen.
+
+Lo que falta es algo que haga que el agente las escuche.
+
+Eso es Bouncer.
+
+## La idea
+
+Bouncer pone un gate de verificación entre tu agente y el final de su turno.
 
 ```text
-        ┌───────────┐
-        │    Vos    │  le pedís algo
-        └─────┬─────┘
-              │
-              ▼
-        ┌───────────┐
-        │  Agente   │◀──────────────────────────────────────────┐
-        └─────┬─────┘  hace el trabajo, y dice que terminó      │
-              │                                                 │
-              ▼                                                 │
-        ┌───────────┐                                           │
-        │  Bouncer  │  corre los checks que tu repo necesita    │
-        └─────┬─────┘                                           │
-              │                                                 │
-      ┌───────┼──────────────┐                                  │
-      │       │              │                                  │
-    PASS  ESCALATE        BOUNCE ───────────────────────────────┘
-      │       │           con la falla
-      ▼       ▼
-  ┌───────────────────┐
-  │        Vos        │
-  └───────────────────┘
-
-  PASS      la respuesta te llega, ya pasó por el gate
-  ESCALATE  tercera falla seguida: el gate sigue en rojo, y decidís vos
+Vos
+ │
+ ▼
+Agente
+ │
+ │  "Terminé."
+ ▼
+Bouncer
+ │
+ ├── PASS ────────► Vos
+ │
+ ├── BOUNCE ──────► Agente
+ │                   │
+ │                   └── arregla la falla
+ │
+ └── ESCALATE ────► Vos
 ```
 
-Un patova no discute si estás o no en la lista. Y estar muy convencido de que
-estás en la lista no te va a hacer entrar. Esa es toda la idea.
+El agente sigue haciendo el trabajo. Bouncer no reemplaza al agente, no mejora
+su razonamiento ni le reescribe los prompts.
 
-## Por qué
+Hace una sola cosa: chequea lo que el agente realmente dejó hecho.
 
-Tu agente dice que finalizó con la tarea que le diste. Casi nunca es así.
-Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo,
-te vuelve a decir que está listo, y ahí se te fue toda la tarde en ese ida y
-vuelta constante.
+Si el repo pasa sus checks, el turno termina. Si algo falla, Bouncer le devuelve
+la falla al agente en vez de terminar el turno, y el agente tiene otra
+oportunidad de arreglarlo.
 
-Un prompt mejor no va a arreglar eso, y no es que tu agente sea descuidado. Para
-cuando cree que el trabajo está terminado, y esa creencia sale de lo que quiso
-hacer, no de algo que haya mirado lo que efectivamente hizo. Nadie corrió los
-linters, validó los manifiestos ni corrió los tests. El primer chequeo sos vos.
+No tenés que escribir el segundo prompt.
 
-Bouncer pone un chequeo antes que vos. Envuelve el trabajo de tu agente como un
-test harness envuelve código bajo prueba: corre los checks, lee el resultado, y
-decide si el trabajo pasa.
+## Por qué importa
 
-## Qué chequea
+Un agente decide que terminó según lo que cree que logró.
 
-Bouncer mira lo que quedó hecho en tu repo, no lo que el agente dice que hizo.
-Lo pasa por las mismas herramientas que usarías vos (linters, validadores y
-tests), que para el mismo archivo dan siempre la misma respuesta. Así atrapa
-cosas como:
+Bouncer decide si terminó según lo que realmente pasó.
 
-- un script de shell que se rompe la primera vez que una variable tiene un
-  espacio
-- YAML que no parsea, o un manifiesto de Kubernetes que no respeta su schema
-- un chart de Helm que no renderiza, una policy de Kyverno cuyo propio test falla
-- Terraform que no valida, o cuya documentación generada ya no coincide
-- una suite de tests que falla, o cobertura por debajo del piso
-- un secreto a punto de ser commiteado
+Son cosas distintas. Un agente puede decir:
+
+> "Agregué el deployment de Kubernetes."
+
+Y el repo puede decir:
+
+> "El YAML no parsea."
+
+Bouncer le cree al repo.
+
+## Qué chequea Bouncer
+
+Bouncer no inventa un lenguaje de verificación nuevo. Usa las herramientas en
+las que tu proyecto ya confía:
+
+- linters
+- validadores
+- tests
+- chequeos de schema
+- chequeos de seguridad
+- chequeos de archivos generados
+- pisos de cobertura
 
 Corre solo lo que aplica: si no hay Terraform en tu repo, no hay checks de
-Terraform. Qué cuenta como check lo cambiás vos: son herramientas comunes,
-declaradas en `.pre-commit-config.yaml` y en `scripts/verify.sh`, no un lenguaje
-que Bouncer se inventó.
+Terraform.
 
-## El veredicto
-
-Cada vez que tu agente dice que terminó, Bouncer corre `make verify`. Si pasa,
-el veredicto es `PASS`. Si falla, es `BOUNCE`. Y si falla tres veces seguidas,
-`ESCALATE`:
-
-| Veredicto | Qué pasa |
-| --- | --- |
-| `PASS` | El turno termina. La respuesta que leés ya pasó por el gate. |
-| `BOUNCE` | El turno no termina. La falla le cae en el contexto al agente, y la arregla sin que vos escribas nada. |
-| `ESCALATE` | La tercera falla seguida, falle en lo que falle. Bouncer deja de insistir, termina el turno con el gate todavía en rojo, y la decisión pasa a ser tuya. |
-
-El tercero importa tanto como los otros dos. Hay fallas que el agente no puede
-arreglar, y sin un límite el agente seguiría intentando arreglarlas para
-siempre, gastando tokens en vueltas que no llevan a nada. Y un gate que nunca te
-deja avanzar es un gate que terminás desactivando. Por eso, a la tercera
-falla, Bouncer frena y te escala el problema: te avisa en ese momento, y la
-decisión de cómo resolverlo pasa a ser tuya.
-
-Un turno también puede terminar sin que el gate haya corrido, y se ve igual que
-un `PASS`: cuando existe `.claude/.skip-verify`, cuando falta `jq` o el
-`Makefile`, o cuando el hook no puede leer su entrada o llegar al proyecto. El
-primero queda anotado en `make escalations`; los demás no.
-[Qué se corrió de verdad](docs/evidence.es.md) cubre cada uno.
-
-## Qué no es Bouncer
-
-No es un agente, y no intenta hacer el trabajo. No hace más inteligente a tu
-agente ni te reescribe los prompts. Tu agente sigue haciendo cada arreglo.
-
-Contesta una sola pregunta: ¿esta ejecución dejó el repo en un estado que
-aceptamos?
-
-## Cómo llega hasta ahí
-
-Dos hooks, que son comandos que Claude Code dispara solo. Vos nunca los llamás.
-
-**Mientras el agente trabaja**, `PostToolUse` se dispara después de que cada
-archivo se edita o se escribe, lintea ese archivo solo, y tarda menos de dos
-segundos. La queja le llega al agente mientras todavía está en ese archivo.
-
-**Cuando el turno está por terminar**, `Stop` corre `make verify`, el gate
-entero, y de ahí sale el veredicto.
-
-Lo que hace que un hook pueda frenar al agente es el número con el que sale.
-Exit 1 va a un log de debug que el agente no lee nunca. Exit 2 se le entrega al
-agente, y en `Stop` además bloquea el turno. Bouncer usa exit 2, y
-[cómo funciona](docs/how-it-works.es.md#el-exit-code-es-todo-el-truco) explica
-por qué ese detalle es donde la mayoría de los hooks falla en silencio.
-
-## Cómo se ve un bounce de verdad
+Cuando un check falla, esto es lo que le vuelve al agente:
 
 ```text
 === make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
@@ -139,36 +124,141 @@ por qué ese detalle es donde la mayoría de los hooks falla en silencio.
         2:4       error    syntax error: mapping values are not allowed here (syntax)
 ```
 
-El agente lee eso, arregla el YAML, e intenta terminar el turno de nuevo. Vos
-nunca ves la ida y vuelta: lo que te llega es la respuesta que pasó.
+Esa falla no te llega a vos como un prompt nuevo. Le vuelve al agente:
+
+```text
+Agente
+  │
+  ▼
+Bouncer
+  │
+  │ FAIL
+  ▼
+"yamllint falló en config.yaml:2:4"
+  │
+  ▼
+Agente
+  │
+  └── arregla config.yaml
+```
+
+Después el agente intenta terminar de nuevo, Bouncer chequea de nuevo, y eso es
+el bounce.
+
+## Los tres resultados posibles
+
+Cada verificación termina con uno de tres veredictos.
+
+### PASS
+
+El repo cumple con el gate. El turno termina.
+
+```text
+Agente → Bouncer → PASS → Vos
+```
+
+### BOUNCE
+
+Algo falló, pero el agente tiene otra oportunidad. La falla pasa a ser parte del
+contexto del agente, sin un segundo prompt tuyo.
+
+```text
+Agente → Bouncer → FAIL
+                    │
+                    ▼
+                 Agente
+```
+
+### ESCALATE
+
+El agente falló tres veces seguidas. Bouncer corta el loop y te devuelve la
+decisión a vos.
+
+Esto importa porque un loop de verificación sin límite es solo otra forma de
+quemar tokens para siempre.
+
+```text
+intento 1 → BOUNCE
+intento 2 → BOUNCE
+intento 3 → ESCALATE
+```
+
+Un aviso: un turno también puede terminar sin que el gate corra, y se ve igual
+que un `PASS`. Pasa cuando existe `.claude/.skip-verify`, cuando falta `jq` o el
+`Makefile`, o cuando el hook no puede leer su entrada o llegar al proyecto.
+[Qué se corrió de verdad](docs/evidence.es.md) cubre cada caso.
+
+## Cómo funciona
+
+Bouncer usa dos momentos del ciclo del agente. Los dos son hooks de Claude Code:
+comandos que Claude Code corre solo, sin que vos los llames.
+
+- `PostToolUse` da feedback rápido mientras el agente trabaja: lintea cada
+  archivo justo después de que se edita o se escribe.
+- `Stop` es el gate final: corre `make verify` cuando el agente intenta terminar
+  el turno.
+
+```text
+                ┌────────────────┐
+                │     Agente     │
+                └────────┬───────┘
+                         │
+                  edita / escribe
+                         │
+                         ▼
+                ┌────────────────┐
+                │  PostToolUse   │
+                │ chequeo rápido │
+                └────────┬───────┘
+                         │
+                         ▼
+                  El agente sigue
+                         │
+                         │ "terminé"
+                         ▼
+                ┌────────────────┐
+                │      Stop      │
+                │  make verify   │
+                └────────┬───────┘
+                         │
+           ┌─────────────┼─────────────┐
+           ▼             ▼             ▼
+         PASS         BOUNCE       ESCALATE
+           │             │             │
+           ▼             ▼             ▼
+          Vos         Agente          Vos
+```
+
+El detalle importante es que Bouncer no se limita a ver la falla. Puede impedir
+que el turno termine y devolverle la falla al agente. Eso es lo que convierte la
+verificación en un loop, y depende del exit code con el que sale un hook:
+[cómo funciona](docs/how-it-works.es.md#el-exit-code-es-todo-el-truco) explica
+por qué.
 
 ## Probalo
 
 ```bash
 git clone https://github.com/Emi-Licha/bouncer.git
 cd bouncer
+
 make bootstrap
+make demo
+make selftest
 ```
 
 `make bootstrap` instala las herramientas, y la primera vez tarda unos minutos.
-Los dos comandos que siguen no necesitan Claude Code para nada.
-
-```bash
-make demo      # todos los fixtures de examples/broken tienen que ser rechazados
-make selftest  # todo lo de examples/valid tiene que pasar
-```
-
-Uno muestra al gate atrapando defectos de verdad. El otro lo muestra aceptando
-trabajo bueno, que es la mitad que nadie prueba. En pocos segundos lo viste
-hacer las dos cosas en tu máquina, en vez de creerle a un README.
-
-Verlo frenar a un agente viene después, y eso necesita una sesión reiniciada.
-[Cómo funciona](docs/how-it-works.es.md) explica por qué, y cómo comprobarlo.
+`make demo` muestra a Bouncer rechazando fixtures rotos a propósito.
+`make selftest` lo muestra aceptando los válidos. Podés ver el gate andando
+antes de conectarlo a un agente.
 
 ## Instalalo en tu proyecto
 
-Bouncer son un puñado de archivos, así que instalarlo es copiarlo. Todo esto se
-corre desde la raíz de tu proyecto.
+Bouncer es chico a propósito. No hay un framework de agentes nuevo para aprender
+ni un DSL de verificación propio. Copiás los hooks y los scripts a tu repo,
+reiniciás Claude Code, y el gate pasa a ser parte del flujo de trabajo de tu
+agente.
+
+Todo esto se corre desde la raíz de tu proyecto.
 
 **1. Fijate qué pisarías.**
 
@@ -243,6 +333,22 @@ Después rompé algo a propósito y confirmá que te frenan. Un gate que nunca v
 bloquear nada es un gate que no tenés, y
 [cómo funciona](docs/how-it-works.es.md#la-trampa) te da los tres chequeos.
 
+## Qué no es Bouncer
+
+Bouncer no es un agente.
+
+No escribe código.
+
+No decide cómo resolver una tarea.
+
+No hace más inteligente a tu modelo.
+
+Hace algo más simple: hace que tu agente pase por el mismo gate de verificación
+que habrías usado vos.
+
+La diferencia es que, cuando algo falla, la falla le llega primero al agente. A
+vos te llega el resultado cuando ya pasó.
+
 ## Los comandos
 
 | Comando | Qué hace |
@@ -305,6 +411,10 @@ Probablemente no te sirva si:
 - **Tu stack es JavaScript, Go, Java o Rust.** Todavía no hay linters conectados
   para esos lenguajes.
 - **Lo necesitás en Windows.** Por ahora está probado solo en macOS.
+
+## La idea en una frase
+
+**No le preguntes al agente si terminó. Preguntale al repo.**
 
 ## Licencia
 
