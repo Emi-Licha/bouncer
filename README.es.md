@@ -258,7 +258,8 @@ personal nunca tienen que pelearse.
 
 ## Seguí leyendo
 
-- **[Cómo funciona](docs/how-it-works.es.md)**: dónde entra Bouncer en un agente, qué hace cada archivo, las dos trampas que hacen que un
+- **[Cómo funciona](docs/how-it-works.es.md)**: dónde entra Bouncer en un
+  agente, qué hace cada archivo, las dos trampas que hacen que un
   gate parezca real sin serlo, y por qué cada decisión salió como salió.
 - **[Qué se corrió de verdad](docs/evidence.es.md)**: cada afirmación de acá que
   fue probada, cómo, y qué no se probó. Incluido lo que Bouncer no puede hacer.
@@ -275,6 +276,18 @@ personal nunca tienen que pelearse.
   con un agente, y que el mismo gate corra para todos.
 - **Estás armando tu propio harness de verificación**, y querés la semántica de
   los exit codes y las trampas escritas por alguien que se las comió.
+
+Probablemente no te sirva si tu agente no es Claude Code, porque el loop depende
+de los hooks de Claude Code; si tu stack es JavaScript, Go, Java o Rust, que
+todavía no tienen linters conectados; o si lo necesitás en Windows, o querés que
+reemplace a tu CI. Corre en tu máquina, y está probado en macOS.
+
+## Roadmap
+
+Bouncer chequea artefactos. Una capa de verificación para sistemas agénticos
+podría chequear más que eso, y estas son las piezas que acá todavía no existen,
+nombradas para que nadie tenga que adivinar:
+
 - **Verificación de tools.** Si se llamó a la tool correcta, con argumentos
   válidos, y si se salteó un paso que se esperaba.
 - **Métricas de costo y tokens.** Cuánto gastó un turno, y un techo para eso.

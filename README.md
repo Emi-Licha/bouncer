@@ -257,7 +257,8 @@ never have to fight.
 
 ## Read on
 
-- **[How it works](docs/how-it-works.md)**: where Bouncer fits in an agent, what each file does, the two traps that make a gate look
+- **[How it works](docs/how-it-works.md)**: where Bouncer fits in an agent,
+  what each file does, the two traps that make a gate look
   real while doing nothing, and why each decision went the way it did.
 - **[What was actually run](docs/evidence.md)**: every claim here that was
   tested, how, and what was not tested. Including what Bouncer cannot do.
@@ -273,6 +274,18 @@ never have to fight.
   the same gate to run for everyone.
 - **You are building your own verification harness**, and want the exit-code
   semantics and the traps written down by someone who hit them.
+
+It is probably not for you if your agent is not Claude Code, since the loop
+depends on Claude Code hooks; if your stack is JavaScript, Go, Java or Rust,
+which have no linters wired in yet; or if you need it on Windows, or want it to
+replace CI. It runs on your machine, and it is tested on macOS.
+
+## Roadmap
+
+Bouncer checks artifacts. A verification layer for agentic systems could check
+more than that, and these are the pieces that do not exist here yet, named so
+nobody has to guess:
+
 - **Tool verification.** Whether the right tool was called, with valid
   arguments, and whether an expected step was skipped.
 - **Cost and token metrics.** What a turn spent, and a ceiling on it.
