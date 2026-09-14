@@ -15,8 +15,9 @@ verificación. En la ingeniería de agentes, el harness es todo lo que rodea al
 modelo y le permite actuar, y en ese sentido Claude Code es uno. El resto de
 esta sección usa el segundo sentido, para mostrar dónde entra Bouncer.
 
-El harness de un agente, en ese sentido, se suele describir como nueve piezas. Seis le permiten al agente
-trabajar, y tres son las que te permiten confiar en el resultado:
+El harness de un agente, en ese sentido, se suele describir como nueve piezas.
+Seis le permiten al agente trabajar, y tres son las que te permiten confiar en
+el resultado:
 
 | # | La pieza | Para qué está | Quién te la da |
 | --- | --- | --- | --- |

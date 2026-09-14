@@ -15,8 +15,8 @@ is a verification harness. In agent engineering, the harness is everything
 around the model that lets it act at all, and in that sense Claude Code is one.
 The rest of this section uses the second sense, to show where Bouncer fits.
 
-An agent's harness, in that sense, is usually described as nine pieces. Six let the agent work at all,
-and three are what let you trust the result:
+An agent's harness, in that sense, is usually described as nine pieces. Six let
+the agent work at all, and three are what let you trust the result:
 
 | # | The piece | What it is for | Who gives it to you |
 | --- | --- | --- | --- |

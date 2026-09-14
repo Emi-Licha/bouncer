@@ -179,8 +179,8 @@ ls -d Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml CLAUDE.m
 
 Lo que aparezca ya existe. Esos combinalos a mano en vez de copiar encima. Si
 aparece `scripts`, fijate si tiene archivos con el mismo nombre que los de
-Bouncer antes del paso 2, porque se pisan;
-[cómo funciona](docs/how-it-works.es.md#combinarlo-con-un-proyecto-que-ya-existe)
+Bouncer antes del paso 2, porque se pisan.
+[Cómo funciona](docs/how-it-works.es.md#combinarlo-con-un-proyecto-que-ya-existe)
 dice qué va dónde.
 
 **2. Copiá los archivos.**

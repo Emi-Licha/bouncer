@@ -181,8 +181,9 @@ ls -d Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml CLAUDE.m
 
 Anything listed already exists. Merge those by hand instead of copying over
 them. If `scripts` shows up, check for files named like Bouncer's before step 2,
-since those get overwritten; [how it works](docs/how-it-works.md#merging-into-an-existing-project) says
-what goes where.
+since those get overwritten.
+[How it works](docs/how-it-works.md#merging-into-an-existing-project) says what
+goes where.
 
 **2. Copy the files.**
 
