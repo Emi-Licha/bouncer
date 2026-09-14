@@ -92,7 +92,9 @@ That third one matters as much as the first two. Some failures are ones the
 agent cannot fix, and without a limit the agent would keep trying to fix them
 forever, burning tokens on rounds that lead nowhere. And a gate that never lets
 you through is a gate people end up turning off. So on the third failure Bouncer
-stops and tells you, and `make escalations` shows you every time it did.
+stops and escalates the problem to you: it tells you right then, and how to
+solve it becomes your call. `make escalations` shows you afterwards every time
+that happened.
 
 ## What Bouncer is not
 
