@@ -64,10 +64,11 @@ ran, but the complaint lands in context and the next step fixes it.
 
 **`Stop`** runs `make verify`, the whole gate. On failure it writes a header and
 the last sixty lines of the output to stderr and exits 2, so the turn cannot
-end. It counts consecutive failures in a file under `TMPDIR`. On the third one
-it escalates instead: it ends the turn with the gate red, tells you so, and resets the
-counter, because without the reset the gate would stay open for the rest of the
-session.
+end. It counts consecutive failures in a file under `TMPDIR`, whatever each one
+failed on, and the count carries across turns in the same session until a run
+passes. The first two failures bounce. The third escalates instead: it ends the
+turn with the gate red, tells you so, and resets the counter, because without
+the reset the gate would stay open for the rest of the session.
 
 Both hooks are defensive: any unexpected condition exits 0 in silence. A broken
 hook that blocks every turn is worse than no hook.
@@ -139,7 +140,10 @@ the files:
 - `.claude/settings.json`: copy the `hooks` block from Bouncer's into yours.
 - `Makefile`: copy the targets you want. `verify` is required, because it is the
   one the Stop hook calls.
-- `.pre-commit-config.yaml`: add Bouncer's `repos` entries to yours.
+- `.pre-commit-config.yaml`: add Bouncer's `repos` entries to yours, and its
+  top-level `exclude: ^examples/broken/`. Without it, the fixtures that are
+  broken on purpose fail your gate on every run. If you would rather not carry
+  that line, do not copy `examples/`.
 - `CLAUDE.md`: append the Definition of Done block from the README.
 
 ## Why it does things this way

@@ -33,7 +33,7 @@ vuelve al agente con el motivo de la falla.
   └───────────────────┘
 
   PASS      la respuesta te llega, ya pasó por el gate
-  ESCALATE  tres bounces seguidos: el gate sigue en rojo, y decidís vos
+  ESCALATE  tercera falla seguida: el gate sigue en rojo, y decidís vos
 ```
 
 Un patova no discute si estás o no en la lista. Y estar muy convencido de que
@@ -64,16 +64,16 @@ cosas como:
 
 - un script de shell que se rompe la primera vez que una variable tiene un
   espacio
-- YAML que no parsea, o un manifiesto de Kubernetes que el cluster rechazaría
+- YAML que no parsea, o un manifiesto de Kubernetes que no respeta su schema
 - un chart de Helm que no renderiza, una policy de Kyverno cuyo propio test falla
 - Terraform que no valida, o cuya documentación generada ya no coincide
 - una suite de tests que falla, o cobertura por debajo del piso
 - un secreto a punto de ser commiteado
 
-Once linters y validadores, y corre solo lo que aplica. Si no hay Terraform en
-tu repo, no hay checks de Terraform. Qué cuenta como check lo cambiás vos: son
-herramientas comunes, declaradas en `.pre-commit-config.yaml` y en
-`scripts/verify.sh`, no un lenguaje que Bouncer se inventó.
+Corre solo lo que aplica: si no hay Terraform en tu repo, no hay checks de
+Terraform. Qué cuenta como check lo cambiás vos: son herramientas comunes,
+declaradas en `.pre-commit-config.yaml` y en `scripts/verify.sh`, no un lenguaje
+que Bouncer se inventó.
 
 ## El veredicto
 
@@ -85,7 +85,7 @@ el veredicto es `PASS`. Si falla, es `BOUNCE`. Y si falla tres veces seguidas,
 | --- | --- |
 | `PASS` | El turno termina. La respuesta que leés ya pasó por el gate. |
 | `BOUNCE` | El turno no termina. La falla le cae en el contexto al agente, y la arregla sin que vos escribas nada. |
-| `ESCALATE` | Tres bounces seguidos sobre el mismo problema. Bouncer deja de insistir, termina el turno con el gate todavía en rojo, y la decisión pasa a ser tuya. |
+| `ESCALATE` | La tercera falla seguida, falle en lo que falle. Bouncer deja de insistir, termina el turno con el gate todavía en rojo, y la decisión pasa a ser tuya. |
 
 El tercero importa tanto como los otros dos. Hay fallas que el agente no puede
 arreglar, y sin un límite el agente seguiría intentando arreglarlas para
@@ -93,6 +93,12 @@ siempre, gastando tokens en vueltas que no llevan a nada. Y un gate que nunca te
 deja avanzar es un gate que la gente termina desactivando. Por eso, a la tercera
 falla, Bouncer frena y te escala el problema: te avisa en ese momento, y la
 decisión de cómo resolverlo pasa a ser tuya.
+
+Un turno también puede terminar sin que el gate haya corrido, y se ve igual que
+un `PASS`: cuando existe `.claude/.skip-verify`, cuando falta `jq` o el
+`Makefile`, o cuando el hook no puede leer su entrada o llegar al proyecto. El
+primero queda anotado en `make escalations`; los demás no.
+[Qué se corrió de verdad](docs/evidence.es.md) cubre cada uno.
 
 ## Qué no es Bouncer
 
@@ -167,10 +173,13 @@ corre desde la raíz de tu proyecto.
 **1. Fijate qué pisarías.**
 
 ```bash
-ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
+ls -d Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml CLAUDE.md \
+      .claude/settings.json .claude/hooks .claude/agents examples scripts 2>/dev/null
 ```
 
-Lo que aparezca ya existe. Esos combinalos a mano en vez de copiar encima;
+Lo que aparezca ya existe. Esos combinalos a mano en vez de copiar encima. Si
+aparece `scripts`, fijate si tiene archivos con el mismo nombre que los de
+Bouncer antes del paso 2, porque se pisan;
 [cómo funciona](docs/how-it-works.es.md#combinarlo-con-un-proyecto-que-ya-existe)
 dice qué va dónde.
 
@@ -212,6 +221,9 @@ no tenés:
 ```markdown
 ## Definition of Done
 
+Before you start, lay out your plan in three lines and go ahead. It is not a
+request for approval: it lets the user stop you if they disagree.
+
 Nothing is done until `make verify` passes. If the Stop hook blocks the turn,
 fix the cause. Never disable a check, lower a threshold, skip a test, or edit
 the Makefile or the hooks to get past it.
@@ -249,10 +261,12 @@ bloquear nada es un gate que no tenés, y
 ## En tu idioma
 
 Bouncer habla inglés por defecto, y los informes del reviewer también. Lo podés
-tener en español para vos, configurándolo de la siguiente manera:
+tener en español para vos, configurándolo de la siguiente manera en la terminal
+desde la que abrís Claude Code, así también lo ven los hooks:
 
 ```bash
-BOUNCER_LANG=es make verify
+export BOUNCER_LANG=es
+claude
 ```
 
 O para todos los que clonen el repo, con un `.bouncer.conf` en la raíz:

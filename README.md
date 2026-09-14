@@ -33,7 +33,7 @@ it goes back to the agent with the reason it failed.
   └───────────────────┘
 
   PASS      the answer reaches you, already through the gate
-  ESCALATE  three bounces in a row: the gate is still red, and it is your call
+  ESCALATE  third failure in a row: the gate is still red, and it is your call
 ```
 
 A bouncer does not argue about whether you are on the list or not. And being
@@ -65,16 +65,16 @@ validators and tests), which give the same answer every time for the same file.
 That is how it catches things like:
 
 - a shell script that breaks the first time a variable holds a space
-- YAML that does not parse, or a Kubernetes manifest the cluster would reject
+- YAML that does not parse, or a Kubernetes manifest that does not match its schema
 - a Helm chart that does not render, a Kyverno policy whose own test fails
 - Terraform that does not validate, or whose generated docs no longer match
 - a test suite that fails, or coverage under the floor
 - a secret about to be committed
 
-Eleven linters and validators, and it runs only what applies. No Terraform in
-your repository means no Terraform checks. What counts as a check is yours to
-change: they are ordinary tools, declared in `.pre-commit-config.yaml` and in
-`scripts/verify.sh`, not a language Bouncer invented.
+It runs only what applies, so no Terraform in your repository means no
+Terraform checks. What counts as a check is yours to change: they are ordinary
+tools, declared in `.pre-commit-config.yaml` and in `scripts/verify.sh`, not a
+language Bouncer invented.
 
 ## The verdict
 
@@ -86,7 +86,7 @@ in a row, `ESCALATE`:
 | --- | --- |
 | `PASS` | The turn ends. The answer you read has already been through the gate. |
 | `BOUNCE` | The turn does not end. The failure goes into the agent's context, and it fixes it without you typing anything. |
-| `ESCALATE` | Three bounces in a row on the same problem. Bouncer stops insisting, ends the turn with the gate still red, and hands the decision to you. |
+| `ESCALATE` | The third failure in a row, whatever it failed on. Bouncer stops insisting, ends the turn with the gate still red, and hands the decision to you. |
 
 That third one matters as much as the first two. Some failures are ones the
 agent cannot fix, and without a limit the agent would keep trying to fix them
@@ -94,6 +94,12 @@ forever, burning tokens on rounds that lead nowhere. And a gate that never lets
 you through is a gate people end up turning off. So on the third failure Bouncer
 stops and escalates the problem to you: it tells you right then, and how to
 solve it becomes your call.
+
+A turn can also end without the gate having run at all, and it looks just like
+a `PASS`: when `.claude/.skip-verify` exists, when `jq` or the `Makefile` is
+missing, or when the hook cannot read its input or reach the project. The first
+of those is recorded in `make escalations`; the others are not.
+[What was actually run](docs/evidence.md) covers each one.
 
 ## What Bouncer is not
 
@@ -169,11 +175,13 @@ of your project.
 **1. Check what you would overwrite.**
 
 ```bash
-ls Makefile .pre-commit-config.yaml .claude/settings.json CLAUDE.md 2>/dev/null
+ls -d Makefile .pre-commit-config.yaml .yamllint.yml .markdownlint.yaml CLAUDE.md \
+      .claude/settings.json .claude/hooks .claude/agents examples scripts 2>/dev/null
 ```
 
 Anything listed already exists. Merge those by hand instead of copying over
-them; [how it works](docs/how-it-works.md#merging-into-an-existing-project) says
+them. If `scripts` shows up, check for files named like Bouncer's before step 2,
+since those get overwritten; [how it works](docs/how-it-works.md#merging-into-an-existing-project) says
 what goes where.
 
 **2. Copy the files.**
@@ -214,6 +222,9 @@ you do not have one:
 ```markdown
 ## Definition of Done
 
+Before you start, lay out your plan in three lines and go ahead. It is not a
+request for approval: it lets the user stop you if they disagree.
+
 Nothing is done until `make verify` passes. If the Stop hook blocks the turn,
 fix the cause. Never disable a check, lower a threshold, skip a test, or edit
 the Makefile or the hooks to get past it.
@@ -251,10 +262,12 @@ gives you the three checks to run.
 ## In your language
 
 Bouncer speaks English by default, and so do the reviewer's reports. You can
-have it in Spanish just for yourself, by setting it this way:
+have it in Spanish just for yourself by exporting the variable in the shell you
+start Claude Code from, so the hooks see it too:
 
 ```bash
-BOUNCER_LANG=es make verify
+export BOUNCER_LANG=es
+claude
 ```
 
 Or for everyone who clones the repository, with a `.bouncer.conf` in the root:

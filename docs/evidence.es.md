@@ -65,6 +65,13 @@ hacen a un lado en silencio antes que trabar la sesión. `make bootstrap` lo
 instala, `make doctor` lo lista y `make verify` falla sin él, pero el hook de
 Stop no te puede avisar: es justamente la parte que necesita `jq`.
 
+**Un turno puede terminar sin que corra el gate.** El hook de Stop sale con 0
+antes de correr `make verify` cuando existe `.claude/.skip-verify`, cuando no hay
+`Makefile` o no hay `jq`, cuando no puede entrar a la raíz del proyecto, o cuando
+no puede leer lo que le manda Claude Code. Solo el caso de `.skip-verify` queda
+en `.bouncer-escalations.log`. Los demás terminan el turno igual que un `PASS`,
+sin dejar registro, que es el precio de un hook que nunca traba una sesión.
+
 **El reviewer es un modelo de lenguaje, no un linter.** Sus dos primeras
 revisiones trajeron siete hallazgos, dos reales, y las dos veces el arreglo que
 propuso habría sido peor que el problema. Endurecerle las reglas, para que

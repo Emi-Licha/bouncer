@@ -60,6 +60,13 @@ step aside in silence rather than wedge the session. `make bootstrap` installs
 it, `make doctor` lists it, and `make verify` fails without it, but the Stop
 hook itself cannot warn you: it is the part that needs `jq`.
 
+**A turn can end without the gate running.** The Stop hook exits 0 before
+running `make verify` when `.claude/.skip-verify` exists, when there is no
+`Makefile` or no `jq`, when it cannot change into the project root, or when it
+cannot read what Claude Code sends it. Only the `.skip-verify` case is written to
+`.bouncer-escalations.log`. The others end the turn exactly as a `PASS` would,
+with nothing recorded, which is the price of a hook that never wedges a session.
+
 **The reviewer is a language model, not a linter.** Its first two reviews
 produced seven findings, two of them real, and both times the fix it suggested
 would have been worse than the bug. Tightening its rules, so that it checks what

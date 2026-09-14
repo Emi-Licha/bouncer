@@ -66,8 +66,10 @@ arregla.
 
 **`Stop`** corre `make verify`, el gate entero. Si falla, escribe a stderr un
 encabezado y las últimas sesenta líneas de la salida, y sale con 2, así que el
-turno no puede terminar. Cuenta las fallas seguidas en un archivo bajo `TMPDIR`.
-A la tercera escala: termina el turno con el gate en rojo, te lo dice, y resetea el
+turno no puede terminar. Cuenta las fallas seguidas en un archivo bajo `TMPDIR`,
+sin importar en qué falló cada una, y la cuenta sigue de un turno a otro en la
+misma sesión hasta que una corrida pasa. Las dos primeras fallas rebotan. La
+tercera escala: termina el turno con el gate en rojo, te lo dice, y resetea el
 contador, porque sin ese reset el gate quedaría abierto el resto de la sesión.
 
 Los dos hooks son defensivos: ante cualquier condición inesperada salen con 0 y
@@ -142,7 +144,10 @@ partes en vez de los archivos:
 - `.claude/settings.json`: copiá el bloque `hooks` del de Bouncer al tuyo.
 - `Makefile`: copiá los targets que quieras. `verify` es obligatorio, porque es
   el que llama el hook de Stop.
-- `.pre-commit-config.yaml`: sumá las entradas de `repos` de Bouncer a las tuyas.
+- `.pre-commit-config.yaml`: sumá las entradas de `repos` de Bouncer a las
+  tuyas, y también su `exclude: ^examples/broken/` de arriba de todo. Sin eso,
+  los fixtures rotos a propósito te hacen fallar el gate en cada corrida. Si
+  preferís no llevarte esa línea, no copies `examples/`.
 - `CLAUDE.md`: pegá al final el bloque de Definition of Done del README.
 
 ## Por qué hace las cosas así
