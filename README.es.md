@@ -90,7 +90,7 @@ el veredicto es `PASS`. Si falla, es `BOUNCE`. Y si falla tres veces seguidas,
 El tercero importa tanto como los otros dos. Hay fallas que el agente no puede
 arreglar, y sin un límite el agente seguiría intentando arreglarlas para
 siempre, gastando tokens en vueltas que no llevan a nada. Y un gate que nunca te
-deja avanzar es un gate que la gente termina desactivando. Por eso, a la tercera
+deja avanzar es un gate que terminás desactivando. Por eso, a la tercera
 falla, Bouncer frena y te escala el problema: te avisa en ese momento, y la
 decisión de cómo resolverlo pasa a ser tuya.
 
