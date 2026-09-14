@@ -38,7 +38,7 @@ Piece eight it does not do. Traces earn their keep when a run cannot be
 repeated, and a failing `make verify` can be: run it again on the same machine
 and you get the same output, in more detail than a log would carry. What cannot
 be recovered afterwards is a moment the gate did not run at all, so those are
-written to `.bouncer-releases.log` and `make releases` prints them. Piece nine,
+written to `.bouncer-escalations.log` and `make escalations` prints them. Piece nine,
 measuring a change to the harness itself, is not covered.
 
 That nine-piece map is not ours. It comes from [santi's walk-through of harness
@@ -66,7 +66,7 @@ ran, but the complaint lands in context and the next step fixes it.
 **`Stop`** runs `make verify`, the whole gate. On failure it writes a header and
 the last sixty lines of the output to stderr and exits 2, so the turn cannot
 end. It counts consecutive failures in a file under `TMPDIR`. On the third one
-it releases the turn instead, says so in a message you see, and resets the
+it escalates instead: it ends the turn with the gate red, tells you so, and resets the
 counter, because without the reset the gate would stay open for the rest of the
 session.
 

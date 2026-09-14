@@ -28,7 +28,7 @@ goes back to the agent with the reason.
                       │
                       ▼
                    three bounces in a row, and Bouncer
-                   releases the turn and says so
+                   escalates to you and says so
 ```
 
 A bouncer does not argue about whether you are on the list. Being very confident
@@ -77,12 +77,12 @@ command at the right moment and to act on the answer.
 | --- | --- |
 | `PASS` | The turn ends. The answer you read has already been through the gate. |
 | `BOUNCE` | The turn does not end. The failure goes into the agent's context, and it fixes it without you typing anything. |
-| `RELEASE` | Three bounces in a row on the same problem, so Bouncer lets go, says so, and writes it down. |
+| `ESCALATE` | Three bounces in a row on the same problem. Bouncer stops insisting, ends the turn with the gate still red, and hands the decision to you. |
 
 That third one matters as much as the first two. A check the agent cannot
 satisfy would loop forever, and a gate that traps you is a gate you switch off
 by lunchtime. Bouncer would rather step aside loudly than hold you hostage
-quietly, and `make releases` shows you every time it did.
+quietly, and `make escalations` shows you every time it did.
 
 ## What Bouncer is not
 
@@ -185,7 +185,7 @@ having tested nothing.
 **3. Keep Bouncer's scratch files out of git.**
 
 ```bash
-printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n.bouncer-releases.log\n' >> .gitignore
+printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n.bouncer-escalations.log\n' >> .gitignore
 ```
 
 **4. Install the tools, and track the new files.** `pre-commit` only checks
@@ -231,7 +231,7 @@ gives you the three checks to run.
 | `make verify-full` | Adds a server-side dry run against a live cluster. |
 | `make demo` | Proves the gate still catches things. |
 | `make selftest` | Proves the gate still accepts good things. |
-| `make releases` | Every time the gate stepped aside, and why. |
+| `make escalations` | Every time the gate handed the decision to you, and why. |
 | `make doctor` | Which tools you have, and which you are missing. |
 | `make bootstrap` | Installs them. |
 | `make lang` | Which language Bouncer is speaking. |

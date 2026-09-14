@@ -9,7 +9,7 @@ que le crean. Todo esto se corrió en macOS.
 
 - Los dos hooks registrados, y de qué archivo de settings salieron.
 - `PostToolUse` devolviendo un error de lint al contexto del agente.
-- `Stop` bloqueando un turno, la liberación al tercer intento, y el contador
+- `Stop` bloqueando un turno, la escalada al tercer intento, y el contador
   reseteándose.
 - `.claude/.skip-verify` dejando terminar un turno con el gate todavía en rojo.
 - El reviewer siguiendo el idioma configurado en los dos sentidos: preguntado en
@@ -32,7 +32,7 @@ que le crean. Todo esto se corrió en macOS.
 - `bootstrap` en sus tres ramas y el código de salida de cada una, dos de ellas
   con un gestor de paquetes simulado para no instalar nada.
 - Los dos idiomas en `verify`, `demo`, `doctor`, `bootstrap` y los dos hooks.
-- El registro de liberaciones en sus dos caminos y en los dos idiomas, dándole
+- El registro de escaladas en sus dos caminos y en los dos idiomas, dándole
   al hook de Stop la misma entrada que le manda Claude Code, sobre una copia de
   prueba del repo. Incluidas sus dos formas de degradarse: sin catálogo, y con
   el resumen reformateado, que anotan que no se pudo leer el check en vez de un
@@ -74,7 +74,7 @@ precio es tiempo, unos cinco minutos y medio sobre un diff de noventa líneas, l
 mayor parte verificando sus propias afirmaciones, y nada lo limita. Reproducí un
 hallazgo antes de actuar sobre él, en cualquier caso.
 
-**`.bouncer-releases.log` es una nota para vos, no una auditoría.** Vive en tu
+**`.bouncer-escalations.log` es una nota para vos, no una auditoría.** Vive en tu
 working tree, así que cualquier cosa que pueda escribir ahí lo puede editar, el
 agente incluido. Dos sesiones a la vez intercalan líneas que se parecen entre
 sí, y nada rota el archivo: dejá `.claude/.skip-verify` puesto y crece una línea

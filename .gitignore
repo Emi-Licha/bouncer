@@ -1,7 +1,7 @@
 # Claude Code local state
 .claude/settings.local.json
 .claude/.skip-verify
-.bouncer-releases.log
+.bouncer-escalations.log
 
 # verify scratch space
 .verify-tmp/

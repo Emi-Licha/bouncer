@@ -2,7 +2,7 @@
 # Stop hook. This is the real gate: `make verify` has to pass before a turn
 # can end. Exit 2 blocks the stop and hands stderr back as the reason.
 #
-# Anti-loop guard: three consecutive failures release the gate, because a check
+# Anti-loop guard: three consecutive failures escalate to the user, because a check
 # that cannot be fixed would otherwise spin forever.
 set -u
 
@@ -23,23 +23,23 @@ else
   msg() {
     case "$1" in
       stop_blocked)  printf '=== make verify FAILED (attempt %s/3): the turn cannot end ===' "$2" ;;
-      stop_released) printf 'verify keeps failing after 3 attempts, releasing the gate' ;;
-      log_released)  printf 'gate released after 3 failed attempts, first failing check: %s' "$2" ;;
-      log_skipped)   printf 'gate skipped: .claude/.skip-verify is present' ;;
-      log_released_unreadable)
-                     printf 'gate released after 3 failed attempts; the failing check could not be read from make verify output' ;;
+      stop_escalated) printf 'make verify still fails after 3 attempts: escalating to you, the turn ends with the gate red' ;;
+      log_escalated) printf 'escalated after 3 failed attempts, first failing check: %s' "$2" ;;
+      log_skipped)   printf 'gate skipped: .claude/.skip-verify is present, so the decision was already yours' ;;
+      log_escalated_unreadable)
+                     printf 'escalated after 3 failed attempts; the failing check could not be read from make verify output' ;;
     esac
   }
 fi
 
-# Bouncer steps aside in exactly two places: the three-strike release and the
+# Bouncer steps aside in exactly two places: the three-strike escalation and the
 # .skip-verify escape. Both end a turn with the gate red, and neither used to
 # leave a trace, so "how often does this happen here?" had no answer. One line
 # per event. Logging never fails the hook: a turn is not worth wedging over a
 # file that could not be written.
 note() {
   printf '%s  %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$1" \
-    >> .bouncer-releases.log 2>/dev/null || true
+    >> .bouncer-escalations.log 2>/dev/null || true
 }
 
 # Manual escape hatch. Git-ignored; never created automatically.
@@ -73,11 +73,11 @@ n=$((n + 1))
 printf '%s' "$n" > "$counter"
 
 if [ "$n" -ge 3 ]; then
-  # Resetting here matters: without it the gate stays released for the rest of
+  # Resetting here matters: without it the gate stays open for the rest of
   # the session instead of only for this deadlock.
   rm -f "$counter"
   # Naming the check that was failing is what makes the log worth reading: three
-  # releases on the same check is a check to fix, not an agent to blame.
+  # escalations on the same check is a check to fix, not an agent to blame.
   # The headers come from the catalogue rather than being spelled out here: in
   # Spanish the block says CHECKS FALLIDOS, and an English-only pattern logged a
   # question mark instead of the check that was failing.
@@ -93,11 +93,11 @@ if [ "$n" -ge 3 ]; then
   # changes, the log says so instead of writing a bare question mark that looks
   # like nothing was failing.
   if [ -n "$first" ]; then
-    note "$(msg log_released "$first")"
+    note "$(msg log_escalated "$first")"
   else
-    note "$(msg log_released_unreadable)"
+    note "$(msg log_escalated_unreadable)"
   fi
-  printf '{"systemMessage": "%s"}\n' "$(msg stop_released)"
+  printf '{"systemMessage": "%s"}\n' "$(msg stop_escalated)"
   exit 0
 fi
 

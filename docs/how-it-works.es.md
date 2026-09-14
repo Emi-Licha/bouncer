@@ -38,7 +38,7 @@ La ocho no la hace. Las trazas valen cuando una corrida no se puede repetir, y
 un `make verify` que falla sí se puede: corrélo de nuevo en la misma máquina y
 te da lo mismo, con más detalle del que un log iba a guardar. Lo que no se
 recupera después es un momento en que el gate no corrió, así que esos quedan en
-`.bouncer-releases.log` y los imprime `make releases`. La nueve, medir un cambio
+`.bouncer-escalations.log` y los imprime `make escalations`. La nueve, medir un cambio
 del harness mismo, no está cubierta.
 
 Ese mapa de nueve piezas no es nuestro. Sale de [la explicación de harness
@@ -67,7 +67,7 @@ arregla.
 **`Stop`** corre `make verify`, el gate entero. Si falla, escribe a stderr un
 encabezado y las últimas sesenta líneas de la salida, y sale con 2, así que el
 turno no puede terminar. Cuenta las fallas seguidas en un archivo bajo `TMPDIR`.
-A la tercera libera el turno, lo dice en un mensaje que vos ves, y resetea el
+A la tercera escala: termina el turno con el gate en rojo, te lo dice, y resetea el
 contador, porque sin ese reset el gate quedaría abierto el resto de la sesión.
 
 Los dos hooks son defensivos: ante cualquier condición inesperada salen con 0 y

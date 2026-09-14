@@ -9,7 +9,7 @@ believed. All of this was run on macOS.
 
 - Both hooks registered, and which settings file they came from.
 - `PostToolUse` returning a lint error into the agent's context.
-- `Stop` blocking a turn, the three-strike release, and the counter resetting.
+- `Stop` blocking a turn, the three-strike escalation, and the counter resetting.
 - `.claude/.skip-verify` letting a turn end with the gate still red.
 - The reviewer following the configured language both ways: asked in Spanish
   with the English default it answered in English, and set to Spanish it
@@ -29,7 +29,7 @@ believed. All of this was run on macOS.
 - `bootstrap` on all three of its branches and the exit code each returns, two
   of them with a stand-in package manager so nothing was installed.
 - Both languages across `verify`, `demo`, `doctor`, `bootstrap` and both hooks.
-- The release log on both of its paths and in both languages, by feeding the
+- The escalation log on both of its paths and in both languages, by feeding the
   Stop hook the input Claude Code sends it, in a scratch copy of the repository.
   Including the two ways it degrades: no catalogue, and a reformatted summary,
   which log that the failing check could not be read rather than a bare `?`.
@@ -69,7 +69,7 @@ time, about five and a half minutes on a ninety-line diff, most of it spent
 verifying its own claims, and nothing caps that. Reproduce a finding before
 acting on it, either way.
 
-**`.bouncer-releases.log` is a note to yourself, not an audit trail.** It sits
+**`.bouncer-escalations.log` is a note to yourself, not an audit trail.** It sits
 in your working tree, so anything that can write there can edit it, the agent
 included. Two sessions running at once interleave lines that look alike, and
 nothing rotates the file: leave `.claude/.skip-verify` in place and it grows by

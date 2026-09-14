@@ -28,7 +28,7 @@ agente con el motivo.
                       │
                       ▼
                    tres bounces seguidos, y Bouncer
-                   libera el turno y lo dice
+                   te lo escala y lo dice
 ```
 
 Un patova no discute si estás en la lista. Estar muy convencido de que estás en
@@ -78,12 +78,12 @@ momento justo y para actuar según la respuesta.
 | --- | --- |
 | `PASS` | El turno termina. La respuesta que leés ya pasó por el gate. |
 | `BOUNCE` | El turno no termina. La falla le cae en el contexto al agente, y la arregla sin que vos escribas nada. |
-| `RELEASE` | Tres bounces seguidos sobre el mismo problema, así que Bouncer suelta, lo dice, y lo deja escrito. |
+| `ESCALATE` | Tres bounces seguidos sobre el mismo problema. Bouncer deja de insistir, termina el turno con el gate todavía en rojo, y la decisión pasa a ser tuya. |
 
 El tercero importa tanto como los otros dos. Un check que el agente no puede
 satisfacer generaría un loop infinito, y un gate que te deja encerrado es uno
 que apagás antes del mediodía. Bouncer prefiere hacerse a un lado en voz alta
-antes que tenerte de rehén en silencio, y `make releases` te muestra cada vez
+antes que tenerte de rehén en silencio, y `make escalations` te muestra cada vez
 que lo hizo.
 
 ## Qué no es Bouncer
@@ -186,7 +186,7 @@ pasar sin haber probado nada.
 **3. Dejá los archivos temporales de Bouncer fuera de git.**
 
 ```bash
-printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n.bouncer-releases.log\n' >> .gitignore
+printf '.claude/settings.local.json\n.claude/.skip-verify\n.verify-tmp/\n.bouncer-escalations.log\n' >> .gitignore
 ```
 
 **4. Instalá las herramientas y trackeá los archivos nuevos.** `pre-commit` solo
@@ -232,7 +232,7 @@ bloquear nada es un gate que no tenés, y
 | `make verify-full` | Suma un dry run del lado del servidor contra un cluster. |
 | `make demo` | Prueba que el gate sigue atrapando cosas. |
 | `make selftest` | Prueba que el gate sigue aceptando lo bueno. |
-| `make releases` | Cada vez que el gate se hizo a un lado, y por qué. |
+| `make escalations` | Cada vez que el gate te pasó la decisión, y por qué. |
 | `make doctor` | Qué herramientas tenés y cuáles te faltan. |
 | `make bootstrap` | Las instala. |
 | `make lang` | En qué idioma está hablando Bouncer. |
