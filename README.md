@@ -40,21 +40,14 @@ Your agent says it is done. It almost never is. So you read the diff, you find
 the unquoted variable, you prompt again, it tells you it is done again, and
 there goes your afternoon.
 
-A better prompt will not fix that, and the model is not being careless. It comes
-down to who decides that a task is finished.
+A better prompt will not fix that, and your agent is not being careless. It
+stops when it believes the work is finished, and that belief comes from what it
+meant to do, not from anything that looked at what it did. Nothing has run the
+linters, validated the manifests or run the tests. You are the first check.
 
-A model does one thing: text goes in, text comes out. It does not open files, it
-does not run commands, and it does not remember what it did a minute ago. When
-your agent searches your repository, edits a file and runs the tests, something
-else is carrying those out. That something is called the harness, and with
-Claude Code, Claude is the model and Claude Code is the harness.
-
-The harness also decides when to stop. By default it stops when the model says
-the work is done, and the model answers from what it meant to do, rather than
-from what happened. Nothing has checked the result yet. You are the first thing
-that checks.
-
-Bouncer moves that decision to a command, and puts it at the door.
+Bouncer puts a check before you. It wraps your agent's work the way a test
+harness wraps code under test: it runs the checks, reads the result, and decides
+whether the work gets through.
 
 ## What it checks
 
@@ -93,8 +86,8 @@ quietly, and `make releases` shows you every time it did.
 
 ## What Bouncer is not
 
-It is not an agent, and it does not try to do the work. It does not make the
-model smarter and it does not rewrite your prompts. The model still makes every
+It is not an agent, and it does not try to do the work. It does not make your
+agent smarter and it does not rewrite your prompts. Your agent still makes every
 fix.
 
 It answers one question: did this execution leave the repository in a state we
@@ -115,7 +108,7 @@ What gives a hook teeth is the number it exits with. Exit 1 goes to a debug log
 the agent never reads. Exit 2 is handed to the agent, and on `Stop` it blocks
 the turn. Bouncer uses exit 2, and
 [how it works](docs/how-it-works.md#the-exit-code-is-the-whole-trick) explains
-why that one detail is where most harnesses quietly fail.
+why that one detail is where most hooks quietly fail.
 
 ## A bounce, as it actually looks
 
@@ -264,8 +257,7 @@ never have to fight.
 
 ## Read on
 
-- **[How it works](docs/how-it-works.md)**: the pieces of a harness and which
-  ones Bouncer is, what each file does, the two traps that make a gate look
+- **[How it works](docs/how-it-works.md)**: where Bouncer fits in an agent, what each file does, the two traps that make a gate look
   real while doing nothing, and why each decision went the way it did.
 - **[What was actually run](docs/evidence.md)**: every claim here that was
   tested, how, and what was not tested. Including what Bouncer cannot do.
@@ -279,26 +271,14 @@ never have to fight.
   more than a failed build. That is the stack Bouncer checks out of the box.
 - **Your team wants one Definition of Done** for work done with an agent, and
   the same gate to run for everyone.
-- **You are building your own harness**, and want the exit-code semantics and
-  the traps written down by someone who hit them.
-
-It is probably not for you if your agent is not Claude Code, since the loop
-depends on Claude Code hooks; if your stack is JavaScript, Go, Java or Rust,
-which have no linters wired in yet; or if you need it on Windows, or want it to
-replace CI. It runs on your machine, and it is tested on macOS.
-
-## Roadmap
-
-Bouncer checks artifacts. A verification layer for agentic systems could check
-more than that, and these are the pieces that do not exist here yet, named so
-nobody has to guess:
-
+- **You are building your own verification harness**, and want the exit-code
+  semantics and the traps written down by someone who hit them.
 - **Tool verification.** Whether the right tool was called, with valid
   arguments, and whether an expected step was skipped.
 - **Cost and token metrics.** What a turn spent, and a ceiling on it.
 - **Execution graphs.** The shape of a run, so a workflow that diverged from the
   expected path can be told apart from one that took a different valid route.
-- **Evals.** A stable set of tasks to run before and after changing the harness,
+- **Evals.** A stable set of tasks to run before and after changing Bouncer,
   so an improvement can be told from a regression.
 
 None of these are started. The pieces that are built are described in

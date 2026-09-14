@@ -40,21 +40,14 @@ Tu agente dice que terminó. Casi nunca es así. Entonces leés el diff, encontr
 la variable sin comillas, prompteás de nuevo, te vuelve a decir que está listo,
 y ahí se te fue la tarde.
 
-Un prompt mejor no va a arreglar eso, y no es que el modelo sea descuidado. La
-cuestión es quién decide que una tarea terminó.
+Un prompt mejor no va a arreglar eso, y no es que tu agente sea descuidado. Para
+cuando cree que el trabajo está terminado, y esa creencia sale de lo que quiso
+hacer, no de algo que haya mirado lo que hizo. Nadie corrió los linters, validó
+los manifiestos ni corrió los tests. El primer chequeo sos vos.
 
-Un modelo hace una sola cosa: entra texto, sale texto. No abre archivos, no
-corre comandos y no se acuerda de lo que hizo hace un minuto. Cuando tu agente
-busca en tu repo, edita un archivo y corre los tests, esas acciones las ejecuta
-otra cosa. A esa otra cosa se le dice harness, y con Claude Code, Claude es el
-modelo y Claude Code es el harness.
-
-El harness también decide cuándo parar. Por defecto para cuando el modelo dice
-que el trabajo está terminado, y el modelo contesta desde lo que quiso hacer, no
-desde lo que pasó. Todavía nadie chequeó el resultado. El primero que chequea
-sos vos.
-
-Bouncer mueve esa decisión a un comando, y lo pone en la puerta.
+Bouncer pone un chequeo antes que vos. Envuelve el trabajo de tu agente como un
+test harness envuelve código bajo prueba: corre los checks, lee el resultado, y
+decide si el trabajo pasa.
 
 ## Qué chequea
 
@@ -95,8 +88,8 @@ que lo hizo.
 
 ## Qué no es Bouncer
 
-No es un agente, y no intenta hacer el trabajo. No hace más inteligente al
-modelo ni te reescribe los prompts. El modelo sigue haciendo cada arreglo.
+No es un agente, y no intenta hacer el trabajo. No hace más inteligente a tu
+agente ni te reescribe los prompts. Tu agente sigue haciendo cada arreglo.
 
 Contesta una sola pregunta: ¿esta ejecución dejó el repo en un estado que
 aceptamos?
@@ -116,7 +109,7 @@ Lo que le da dientes a un hook es el número con el que sale. Exit 1 va a un log
 de debug que el agente no lee nunca. Exit 2 se le entrega al agente, y en `Stop`
 además bloquea el turno. Bouncer usa exit 2, y
 [cómo funciona](docs/how-it-works.es.md#el-exit-code-es-todo-el-truco) explica
-por qué ese detalle es donde la mayoría de los harnesses falla en silencio.
+por qué ese detalle es donde la mayoría de los hooks falla en silencio.
 
 ## Cómo se ve un bounce de verdad
 
@@ -265,8 +258,7 @@ personal nunca tienen que pelearse.
 
 ## Seguí leyendo
 
-- **[Cómo funciona](docs/how-it-works.es.md)**: las piezas de un harness y
-  cuáles es Bouncer, qué hace cada archivo, las dos trampas que hacen que un
+- **[Cómo funciona](docs/how-it-works.es.md)**: dónde entra Bouncer en un agente, qué hace cada archivo, las dos trampas que hacen que un
   gate parezca real sin serlo, y por qué cada decisión salió como salió.
 - **[Qué se corrió de verdad](docs/evidence.es.md)**: cada afirmación de acá que
   fue probada, cómo, y qué no se probó. Incluido lo que Bouncer no puede hacer.
@@ -281,27 +273,15 @@ personal nunca tienen que pelearse.
   chequea de fábrica.
 - **Tu equipo quiere una sola definición de terminado** para el trabajo hecho
   con un agente, y que el mismo gate corra para todos.
-- **Estás armando tu propio harness**, y querés la semántica de los exit codes y
-  las trampas escritas por alguien que se las comió.
-
-Probablemente no te sirva si tu agente no es Claude Code, porque el loop depende
-de los hooks de Claude Code; si tu stack es JavaScript, Go, Java o Rust, que
-todavía no tienen linters conectados; o si lo necesitás en Windows, o querés que
-reemplace a tu CI. Corre en tu máquina, y está probado en macOS.
-
-## Roadmap
-
-Bouncer chequea artefactos. Una capa de verificación para sistemas agénticos
-podría chequear más que eso, y estas son las piezas que acá todavía no existen,
-nombradas para que nadie tenga que adivinar:
-
+- **Estás armando tu propio harness de verificación**, y querés la semántica de
+  los exit codes y las trampas escritas por alguien que se las comió.
 - **Verificación de tools.** Si se llamó a la tool correcta, con argumentos
   válidos, y si se salteó un paso que se esperaba.
 - **Métricas de costo y tokens.** Cuánto gastó un turno, y un techo para eso.
 - **Grafos de ejecución.** La forma de una corrida, para distinguir un flujo que
   se desvió del camino esperado de uno que tomó otra ruta igual de válida.
 - **Evals.** Un conjunto estable de tareas para correr antes y después de tocar
-  el harness, y poder distinguir una mejora de una regresión.
+  Bouncer, y poder distinguir una mejora de una regresión.
 
 Ninguna está empezada. Las piezas que sí están construidas se describen en
 [cómo funciona](docs/how-it-works.es.md), y qué se corrió para probarlas está en

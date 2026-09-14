@@ -8,7 +8,14 @@ doing nothing, and why the decisions went the way they did.
 
 ## Where Bouncer sits
 
-A harness is usually described as nine pieces. Six let the agent work at all,
+The word harness is used two ways, and it helps to keep them apart. In testing,
+a harness is the code that wraps something to check it: it runs it, reads what
+comes back, and decides whether it is right. That is the sense in which Bouncer
+is a verification harness. In agent engineering, the harness is everything
+around the model that lets it act at all, and in that sense Claude Code is one.
+The rest of this section uses the second sense, to show where Bouncer fits.
+
+An agent's harness, in that sense, is usually described as nine pieces. Six let the agent work at all,
 and three are what let you trust the result:
 
 | # | The piece | What it is for | Who gives it to you |
