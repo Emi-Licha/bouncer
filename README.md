@@ -59,7 +59,7 @@ whether the work gets through.
 
 ## What it checks
 
-Bouncer looks at what was actually written to your repository, not at what the
+Bouncer looks at what was actually done in your repository, not at what the
 agent says it did. It runs it through the same tools you would use (linters,
 validators and tests), which give the same answer every time for the same file.
 That is how it catches things like:

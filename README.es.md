@@ -57,7 +57,7 @@ decide si el trabajo pasa.
 
 ## Qué chequea
 
-Bouncer mira lo que quedó escrito en tu repo, no lo que el agente dice que hizo.
+Bouncer mira lo que quedó hecho en tu repo, no lo que el agente dice que hizo.
 Lo pasa por las mismas herramientas que usarías vos (linters, validadores y
 tests), que para el mismo archivo dan siempre la misma respuesta. Así atrapa
 cosas como:
