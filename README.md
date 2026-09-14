@@ -78,8 +78,9 @@ change: they are ordinary tools, declared in `.pre-commit-config.yaml` and in
 
 ## The verdict
 
-One command, `make verify`, produces it. Everything else exists to run that
-command at the right moment and to act on the answer.
+Every time your agent says it is done, Bouncer runs `make verify`. If it passes,
+the verdict is `PASS`. If it fails, it is `BOUNCE`. And if it fails three times
+in a row, `ESCALATE`:
 
 | Verdict | What happens |
 | --- | --- |

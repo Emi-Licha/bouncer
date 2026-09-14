@@ -77,8 +77,9 @@ herramientas comunes, declaradas en `.pre-commit-config.yaml` y en
 
 ## El veredicto
 
-Lo produce un comando, `make verify`. Todo lo demás existe para correrlo en el
-momento justo y para actuar según la respuesta.
+Cada vez que tu agente dice que terminó, Bouncer corre `make verify`. Si pasa,
+el veredicto es `PASS`. Si falla, es `BOUNCE`. Y si falla tres veces seguidas,
+`ESCALATE`:
 
 | Veredicto | Qué pasa |
 | --- | --- |
