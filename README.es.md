@@ -84,8 +84,8 @@ momento justo y para actuar según la respuesta.
 El tercero importa tanto como los otros dos. Un check que el agente no puede
 satisfacer generaría un loop infinito, y un gate que te deja encerrado es uno
 que apagás antes del mediodía. Bouncer prefiere hacerse a un lado en voz alta
-antes que tenerte de rehén en silencio gastando tokens en un loop infinito, y
-`make escalations` te muestra cada vez que lo hizo.
+antes que tenerte de rehén en silencio gastando tokens en vueltas que no llevan
+a nada, y `make escalations` te muestra cada vez que lo hizo.
 
 ## Qué no es Bouncer
 

@@ -27,19 +27,19 @@ trabajar, y tres son las que te permiten confiar en el resultado:
 | 5 | Un lugar donde trabajar | Un sandbox, para que un comando malo caiga ahí y no en tu máquina. | Claude Code, hasta donde lo configures |
 | 6 | Un objetivo, y verificación | Saber que está terminado porque algo lo chequeó, no porque el modelo lo dijo. | **Bouncer** |
 | 7 | Permisos y límites | Qué puede hacer solo, qué te tiene que preguntar, y cuándo dejar de intentar. | Claude Code, y Bouncer para el cuándo parar |
-| 8 | Observabilidad | Ver qué pasó de verdad en una corrida. | Nadie acá |
-| 9 | Evals | Medir si un cambio en el harness mejoró o empeoró las cosas. | Nadie acá |
+| 8 | Observabilidad | Ver qué pasó de verdad en una corrida. | Fuera del alcance de Bouncer |
+| 9 | Evals | Medir si un cambio en el harness mejoró o empeoró las cosas. | Fuera del alcance de Bouncer |
 
 Bouncer es la pieza seis y la mitad de la siete. Cinco de esas primeras seis ya
 vienen con tu agente. La sexta no, porque solo vos sabés qué significa
 "terminado" en tu repo.
 
-La ocho no la hace. Las trazas valen cuando una corrida no se puede repetir, y
-un `make verify` que falla sí se puede: corrélo de nuevo en la misma máquina y
-te da lo mismo, con más detalle del que un log iba a guardar. Lo que no se
-recupera después es un momento en que el gate no corrió, así que esos quedan en
-`.bouncer-escalations.log` y los imprime `make escalations`. La nueve, medir un cambio
-del harness mismo, no está cubierta.
+Las piezas ocho y nueve quedan fuera de lo que Bouncer se propone: es un gate,
+no un registro de corridas ni un benchmark. Guarda una sola cosa, porque es lo
+único que no se recupera después. Cada momento en que el gate te pasó la
+decisión queda en `.bouncer-escalations.log`, y `make escalations` lo muestra.
+Todo lo demás sobre una corrida que falla lo tenés corriendo `make verify` de
+nuevo.
 
 Ese mapa de nueve piezas no es nuestro. Sale de [la explicación de harness
 engineering de santi](https://x.com/santtiagom_/status/2098782814837543075), que

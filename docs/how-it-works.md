@@ -27,19 +27,18 @@ and three are what let you trust the result:
 | 5 | A place to work | A sandbox, so a bad command lands there and not on your machine. | Claude Code, as far as you configure it |
 | 6 | A goal, and verification | Knowing the work is done because something checked, not because the model said so. | **Bouncer** |
 | 7 | Permissions and limits | What it may do on its own, what it must ask about, and when to stop trying. | Claude Code, and Bouncer for the stopping |
-| 8 | Observability | Seeing what actually happened on a run. | Nobody here |
-| 9 | Evals | Measuring whether a change to the harness helped or hurt. | Nobody here |
+| 8 | Observability | Seeing what actually happened on a run. | Outside Bouncer's scope |
+| 9 | Evals | Measuring whether a change to the harness helped or hurt. | Outside Bouncer's scope |
 
 Bouncer is piece six and half of piece seven. Five of those first six come with
 your agent already. The sixth does not, because only you know what "done" means
 in your repository.
 
-Piece eight it does not do. Traces earn their keep when a run cannot be
-repeated, and a failing `make verify` can be: run it again on the same machine
-and you get the same output, in more detail than a log would carry. What cannot
-be recovered afterwards is a moment the gate did not run at all, so those are
-written to `.bouncer-escalations.log` and `make escalations` prints them. Piece nine,
-measuring a change to the harness itself, is not covered.
+Pieces eight and nine sit outside what Bouncer sets out to do: it is a gate, not
+a recorder or a benchmark. It keeps one record, because it is the one thing that
+cannot be recovered afterwards. Every moment the gate handed the decision to you
+goes into `.bouncer-escalations.log`, and `make escalations` prints it. Anything
+else about a failing run, you get by running `make verify` again.
 
 That nine-piece map is not ours. It comes from [santi's walk-through of harness
 engineering](https://x.com/santtiagom_/status/2098782814837543075), which builds

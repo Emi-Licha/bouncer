@@ -85,8 +85,8 @@ command at the right moment and to act on the answer.
 That third one matters as much as the first two. A check the agent cannot
 satisfy would loop forever, and a gate that traps you is a gate you switch off
 by lunchtime. Bouncer would rather step aside loudly than hold you hostage
-quietly, burning tokens in an endless loop, and `make escalations` shows you
-every time it did.
+quietly, burning tokens on rounds that lead nowhere, and `make escalations`
+shows you every time it did.
 
 ## What Bouncer is not
 
