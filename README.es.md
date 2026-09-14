@@ -87,11 +87,12 @@ el veredicto es `PASS`. Si falla, es `BOUNCE`. Y si falla tres veces seguidas,
 | `BOUNCE` | El turno no termina. La falla le cae en el contexto al agente, y la arregla sin que vos escribas nada. |
 | `ESCALATE` | Tres bounces seguidos sobre el mismo problema. Bouncer deja de insistir, termina el turno con el gate todavía en rojo, y la decisión pasa a ser tuya. |
 
-El tercero importa tanto como los otros dos. Un check que el agente no puede
-satisfacer generaría un loop infinito, y un gate que te deja encerrado es uno
-que apagás antes del mediodía. Bouncer prefiere hacerse a un lado en voz alta
-antes que tenerte de rehén en silencio gastando tokens en vueltas que no llevan
-a nada, y `make escalations` te muestra cada vez que lo hizo.
+El tercero importa tanto como los otros dos. Si un check falla por algo que el
+agente no puede arreglar, sin un límite seguiría intentando para siempre,
+gastando tokens en vueltas que no llevan a nada. Y un gate que nunca te deja
+avanzar es un gate que la gente termina desactivando. Por eso, a la tercera
+falla, Bouncer frena y te avisa, y `make escalations` te muestra cada vez que lo
+hizo.
 
 ## Qué no es Bouncer
 
@@ -112,9 +113,9 @@ segundos. La queja le llega al agente mientras todavía está en ese archivo.
 **Cuando el turno está por terminar**, `Stop` corre `make verify`, el gate
 entero, y de ahí sale el veredicto.
 
-Lo que le da dientes a un hook es el número con el que sale. Exit 1 va a un log
-de debug que el agente no lee nunca. Exit 2 se le entrega al agente, y en `Stop`
-además bloquea el turno. Bouncer usa exit 2, y
+Lo que hace que un hook pueda frenar al agente es el número con el que sale.
+Exit 1 va a un log de debug que el agente no lee nunca. Exit 2 se le entrega al
+agente, y en `Stop` además bloquea el turno. Bouncer usa exit 2, y
 [cómo funciona](docs/how-it-works.es.md#el-exit-code-es-todo-el-truco) explica
 por qué ese detalle es donde la mayoría de los hooks falla en silencio.
 
@@ -282,7 +283,7 @@ preferencia personal nunca tienen que pelearse.
 - **Tu equipo quiere una sola definición de terminado** para el trabajo hecho
   con un agente, y que el mismo gate corra para todos.
 - **Estás armando tu propio harness de verificación**, y querés la semántica de
-  los exit codes y las trampas escritas por alguien que se las comió.
+  los exit codes y las trampas escritas por alguien que ya cayó en ellas.
 
 Probablemente no te sirva si tu agente no es Claude Code, porque el loop depende
 de los hooks de Claude Code; si tu stack es JavaScript, Go, Java o Rust, que

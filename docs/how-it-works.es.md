@@ -82,7 +82,7 @@ es la primera. Esta es la segunda.
 **Los hooks se leen al arrancar la sesión.** Escribí `.claude/settings.json` en
 el medio de una sesión y no queda nada armado. Todos los archivos están bien, la
 configuración es válida, y ningún hook corre. Una ruta mal escrita en ese
-archivo se comporta igual, calladita, como un error no bloqueante.
+archivo se comporta igual: falla sin avisar, como un error no bloqueante.
 
 Así que no le creas a la configuración. Rompé algo y confirmá que te frenaron:
 

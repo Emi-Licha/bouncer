@@ -88,11 +88,11 @@ in a row, `ESCALATE`:
 | `BOUNCE` | The turn does not end. The failure goes into the agent's context, and it fixes it without you typing anything. |
 | `ESCALATE` | Three bounces in a row on the same problem. Bouncer stops insisting, ends the turn with the gate still red, and hands the decision to you. |
 
-That third one matters as much as the first two. A check the agent cannot
-satisfy would loop forever, and a gate that traps you is a gate you switch off
-by lunchtime. Bouncer would rather step aside loudly than hold you hostage
-quietly, burning tokens on rounds that lead nowhere, and `make escalations`
-shows you every time it did.
+That third one matters as much as the first two. If a check fails for a reason
+the agent cannot fix, without a limit it would keep trying forever, burning
+tokens on rounds that lead nowhere. And a gate that never lets you through is a
+gate people end up turning off. So on the third failure Bouncer stops and tells
+you, and `make escalations` shows you every time it did.
 
 ## What Bouncer is not
 
@@ -114,9 +114,9 @@ the agent while it is still on that file.
 **When the turn is about to end**, `Stop` runs `make verify`, the whole gate, and
 that is where the verdict comes from.
 
-What gives a hook teeth is the number it exits with. Exit 1 goes to a debug log
-the agent never reads. Exit 2 is handed to the agent, and on `Stop` it blocks
-the turn. Bouncer uses exit 2, and
+What lets a hook actually stop the agent is the number it exits with. Exit 1
+goes to a debug log the agent never reads. Exit 2 is handed to the agent, and on
+`Stop` it blocks the turn. Bouncer uses exit 2, and
 [how it works](docs/how-it-works.md#the-exit-code-is-the-whole-trick) explains
 why that one detail is where most hooks quietly fail.
 
