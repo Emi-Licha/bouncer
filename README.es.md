@@ -92,8 +92,7 @@ arreglar, y sin un límite el agente seguiría intentando arreglarlas para
 siempre, gastando tokens en vueltas que no llevan a nada. Y un gate que nunca te
 deja avanzar es un gate que la gente termina desactivando. Por eso, a la tercera
 falla, Bouncer frena y te escala el problema: te avisa en ese momento, y la
-decisión de cómo resolverlo pasa a ser tuya. `make escalations` te muestra
-después cada vez que pasó.
+decisión de cómo resolverlo pasa a ser tuya.
 
 ## Qué no es Bouncer
 
