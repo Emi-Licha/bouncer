@@ -4,9 +4,9 @@
 
 [Léelo en castellano](README.es.md)
 
-Bouncer sits at the door of your agent's work. Nothing the agent produces gets
-through until it has been checked, and what fails does not end the turn: it
-goes back to the agent with the reason.
+Bouncer sits at the door of your agent's work. Nothing your agent produces
+gets through until it has been checked, and what fails does not end the turn:
+it goes back to the agent with the reason it failed.
 
 ```text
         ┌───────────┐
@@ -31,19 +31,22 @@ goes back to the agent with the reason.
                    escalates to you and says so
 ```
 
-A bouncer does not argue about whether you are on the list. Being very confident
-that you are on the list does not get you in. That is the whole idea.
+A bouncer does not argue about whether you are on the list or not. And being
+very confident that you are on the list is not going to get you in. That is the
+whole idea.
 
 ## Why
 
-Your agent says it is done. It almost never is. So you read the diff, you find
-the unquoted variable, you prompt again, it tells you it is done again, and
-there goes your afternoon.
+Your agent says it has finished the task you gave it. It almost never has. So
+you read the diff, you find the unquoted variable, you prompt again, it tells you
+it is done again, and there goes your whole afternoon, in that constant back and
+forth.
 
 A better prompt will not fix that, and your agent is not being careless. It
 stops when it believes the work is finished, and that belief comes from what it
-meant to do, not from anything that looked at what it did. Nothing has run the
-linters, validated the manifests or run the tests. You are the first check.
+meant to do, not from anything that looked at what it actually did. Nothing has
+run the linters, validated the manifests or run the tests. You are the first
+check.
 
 Bouncer puts a check before you. It wraps your agent's work the way a test
 harness wraps code under test: it runs the checks, reads the result, and decides
@@ -82,7 +85,8 @@ command at the right moment and to act on the answer.
 That third one matters as much as the first two. A check the agent cannot
 satisfy would loop forever, and a gate that traps you is a gate you switch off
 by lunchtime. Bouncer would rather step aside loudly than hold you hostage
-quietly, and `make escalations` shows you every time it did.
+quietly, burning tokens in an endless loop, and `make escalations` shows you
+every time it did.
 
 ## What Bouncer is not
 
@@ -239,8 +243,8 @@ gives you the three checks to run.
 
 ## In your language
 
-Bouncer speaks English by default, and so do the reviewer's reports. For
-Spanish, either set it for yourself:
+Bouncer speaks English by default, and so do the reviewer's reports. You can
+have it in Spanish just for yourself, by setting it this way:
 
 ```bash
 BOUNCER_LANG=es make verify
@@ -252,8 +256,8 @@ Or for everyone who clones the repository, with a `.bouncer.conf` in the root:
 lang = es
 ```
 
-The variable wins over the file, so a team default and a personal preference
-never have to fight.
+The variable wins over the file, and that way a team default and a personal
+preference never have to fight.
 
 ## Read on
 
@@ -279,24 +283,6 @@ It is probably not for you if your agent is not Claude Code, since the loop
 depends on Claude Code hooks; if your stack is JavaScript, Go, Java or Rust,
 which have no linters wired in yet; or if you need it on Windows, or want it to
 replace CI. It runs on your machine, and it is tested on macOS.
-
-## Roadmap
-
-Bouncer checks artifacts. A verification layer for agentic systems could check
-more than that, and these are the pieces that do not exist here yet, named so
-nobody has to guess:
-
-- **Tool verification.** Whether the right tool was called, with valid
-  arguments, and whether an expected step was skipped.
-- **Cost and token metrics.** What a turn spent, and a ceiling on it.
-- **Execution graphs.** The shape of a run, so a workflow that diverged from the
-  expected path can be told apart from one that took a different valid route.
-- **Evals.** A stable set of tasks to run before and after changing Bouncer,
-  so an improvement can be told from a regression.
-
-None of these are started. The pieces that are built are described in
-[how it works](docs/how-it-works.md), and what was actually run to test them is
-in [the evidence](docs/evidence.md).
 
 ## License
 

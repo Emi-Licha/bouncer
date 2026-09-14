@@ -5,8 +5,8 @@
 [Read it in English](README.md)
 
 Bouncer se para en la puerta del trabajo de tu agente. Nada de lo que produce
-pasa sin haber sido chequeado, y lo que falla no termina el turno: vuelve al
-agente con el motivo.
+tu agente pasa sin haber sido chequeado, y lo que falla no termina el turno:
+vuelve al agente con el motivo de la falla.
 
 ```text
         ┌───────────┐
@@ -31,19 +31,20 @@ agente con el motivo.
                    te lo escala y lo dice
 ```
 
-Un patova no discute si estás en la lista. Estar muy convencido de que estás en
-la lista no te hace entrar. Esa es toda la idea.
+Un patova no discute si estás o no en la lista. Y estar muy convencido de que
+estás en la lista no te va a hacer entrar. Esa es toda la idea.
 
 ## Por qué
 
-Tu agente dice que terminó. Casi nunca es así. Entonces leés el diff, encontrás
-la variable sin comillas, prompteás de nuevo, te vuelve a decir que está listo,
-y ahí se te fue la tarde.
+Tu agente dice que finalizó con la tarea que le diste. Casi nunca es así.
+Entonces leés el diff, encontrás la variable sin comillas, prompteás de nuevo,
+te vuelve a decir que está listo, y ahí se te fue toda la tarde en ese ida y
+vuelta constante.
 
 Un prompt mejor no va a arreglar eso, y no es que tu agente sea descuidado. Para
 cuando cree que el trabajo está terminado, y esa creencia sale de lo que quiso
-hacer, no de algo que haya mirado lo que hizo. Nadie corrió los linters, validó
-los manifiestos ni corrió los tests. El primer chequeo sos vos.
+hacer, no de algo que haya mirado lo que efectivamente hizo. Nadie corrió los
+linters, validó los manifiestos ni corrió los tests. El primer chequeo sos vos.
 
 Bouncer pone un chequeo antes que vos. Envuelve el trabajo de tu agente como un
 test harness envuelve código bajo prueba: corre los checks, lee el resultado, y
@@ -83,8 +84,8 @@ momento justo y para actuar según la respuesta.
 El tercero importa tanto como los otros dos. Un check que el agente no puede
 satisfacer generaría un loop infinito, y un gate que te deja encerrado es uno
 que apagás antes del mediodía. Bouncer prefiere hacerse a un lado en voz alta
-antes que tenerte de rehén en silencio, y `make escalations` te muestra cada vez
-que lo hizo.
+antes que tenerte de rehén en silencio gastando tokens en un loop infinito, y
+`make escalations` te muestra cada vez que lo hizo.
 
 ## Qué no es Bouncer
 
@@ -240,8 +241,8 @@ bloquear nada es un gate que no tenés, y
 
 ## En tu idioma
 
-Bouncer habla inglés por defecto, y los informes del reviewer también. Para
-castellano, o lo configurás para vos:
+Bouncer habla inglés por defecto, y los informes del reviewer también. Lo podés
+tener en español para vos, configurándolo de la siguiente manera:
 
 ```bash
 BOUNCER_LANG=es make verify
@@ -253,8 +254,8 @@ O para todos los que clonen el repo, con un `.bouncer.conf` en la raíz:
 lang = es
 ```
 
-La variable le gana al archivo, así que un default de equipo y una preferencia
-personal nunca tienen que pelearse.
+La variable le gana al archivo, de esa manera un default de equipo y una
+preferencia personal nunca tienen que pelearse.
 
 ## Seguí leyendo
 
@@ -281,24 +282,6 @@ Probablemente no te sirva si tu agente no es Claude Code, porque el loop depende
 de los hooks de Claude Code; si tu stack es JavaScript, Go, Java o Rust, que
 todavía no tienen linters conectados; o si lo necesitás en Windows, o querés que
 reemplace a tu CI. Corre en tu máquina, y está probado en macOS.
-
-## Roadmap
-
-Bouncer chequea artefactos. Una capa de verificación para sistemas agénticos
-podría chequear más que eso, y estas son las piezas que acá todavía no existen,
-nombradas para que nadie tenga que adivinar:
-
-- **Verificación de tools.** Si se llamó a la tool correcta, con argumentos
-  válidos, y si se salteó un paso que se esperaba.
-- **Métricas de costo y tokens.** Cuánto gastó un turno, y un techo para eso.
-- **Grafos de ejecución.** La forma de una corrida, para distinguir un flujo que
-  se desvió del camino esperado de uno que tomó otra ruta igual de válida.
-- **Evals.** Un conjunto estable de tareas para correr antes y después de tocar
-  Bouncer, y poder distinguir una mejora de una regresión.
-
-Ninguna está empezada. Las piezas que sí están construidas se describen en
-[cómo funciona](docs/how-it-works.es.md), y qué se corrió para probarlas está en
-[la evidencia](docs/evidence.es.md).
 
 ## Licencia
 
