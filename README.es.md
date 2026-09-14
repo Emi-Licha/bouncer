@@ -87,10 +87,10 @@ el veredicto es `PASS`. Si falla, es `BOUNCE`. Y si falla tres veces seguidas,
 | `BOUNCE` | El turno no termina. La falla le cae en el contexto al agente, y la arregla sin que vos escribas nada. |
 | `ESCALATE` | Tres bounces seguidos sobre el mismo problema. Bouncer deja de insistir, termina el turno con el gate todavía en rojo, y la decisión pasa a ser tuya. |
 
-El tercero importa tanto como los otros dos. Si un check falla por algo que el
-agente no puede arreglar, sin un límite seguiría intentando para siempre,
-gastando tokens en vueltas que no llevan a nada. Y un gate que nunca te deja
-avanzar es un gate que la gente termina desactivando. Por eso, a la tercera
+El tercero importa tanto como los otros dos. Hay fallas que el agente no puede
+arreglar, y sin un límite el agente seguiría intentando arreglarlas para
+siempre, gastando tokens en vueltas que no llevan a nada. Y un gate que nunca te
+deja avanzar es un gate que la gente termina desactivando. Por eso, a la tercera
 falla, Bouncer frena y te avisa, y `make escalations` te muestra cada vez que lo
 hizo.
 

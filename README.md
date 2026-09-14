@@ -88,11 +88,11 @@ in a row, `ESCALATE`:
 | `BOUNCE` | The turn does not end. The failure goes into the agent's context, and it fixes it without you typing anything. |
 | `ESCALATE` | Three bounces in a row on the same problem. Bouncer stops insisting, ends the turn with the gate still red, and hands the decision to you. |
 
-That third one matters as much as the first two. If a check fails for a reason
-the agent cannot fix, without a limit it would keep trying forever, burning
-tokens on rounds that lead nowhere. And a gate that never lets you through is a
-gate people end up turning off. So on the third failure Bouncer stops and tells
-you, and `make escalations` shows you every time it did.
+That third one matters as much as the first two. Some failures are ones the
+agent cannot fix, and without a limit the agent would keep trying to fix them
+forever, burning tokens on rounds that lead nowhere. And a gate that never lets
+you through is a gate people end up turning off. So on the third failure Bouncer
+stops and tells you, and `make escalations` shows you every time it did.
 
 ## What Bouncer is not
 
