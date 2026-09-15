@@ -1,6 +1,10 @@
 # Bouncer
 
-![Un patovica en pixel art, de brazos cruzados, detrás de tres paneles: PASS, BOUNCE y ESCALATE](docs/assets/bouncer.jpg)
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="docs/assets/bouncer.jpg" width="480" alt="Un patovica en pixel art, de brazos cruzados, detrás de tres paneles: PASS, BOUNCE y ESCALATE">
+</p>
+<!-- markdownlint-enable MD033 -->
 
 **Un harness de verificación para trabajo agéntico.**
 

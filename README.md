@@ -1,6 +1,10 @@
 # Bouncer
 
-![A pixel-art bouncer with his arms crossed, standing behind three panels: PASS, BOUNCE and ESCALATE](docs/assets/bouncer.jpg)
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="docs/assets/bouncer.jpg" width="480" alt="A pixel-art bouncer with his arms crossed, standing behind three panels: PASS, BOUNCE and ESCALATE">
+</p>
+<!-- markdownlint-enable MD033 -->
 
 **A verification harness for agentic coding.**
 
