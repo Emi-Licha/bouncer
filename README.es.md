@@ -36,7 +36,7 @@ El repo ya sabe cómo chequear casi todo esto:
 - Los tests saben si el código funciona.
 - Terraform sabe si su configuración es válida.
 - Helm sabe si un chart renderiza.
-- Los schemas de Kubernetes dicen si un manifiesto es válido.
+- kubeconform sabe si un manifiesto respeta su schema de Kubernetes.
 
 Las herramientas ya existen.
 
@@ -96,8 +96,8 @@ Bouncer le cree al repo.
 
 ## Qué chequea Bouncer
 
-Bouncer no inventa un lenguaje de verificación nuevo. Usa las herramientas en
-las que tu proyecto ya confía:
+Bouncer no inventa un lenguaje de verificación nuevo. Usa herramientas estándar
+que seguramente ya conocés:
 
 - linters
 - validadores
@@ -107,21 +107,37 @@ las que tu proyecto ya confía:
 - chequeos de archivos generados
 - pisos de cobertura
 
-Corre solo lo que aplica: si no hay Terraform en tu repo, no hay checks de
-Terraform.
+Son un set fijo, elegido para trabajo de infraestructura, y Bouncer corre solo
+lo que aplica: si no hay Terraform en tu repo, no hay checks de Terraform.
 
-Cuando un check falla, esto es lo que le vuelve al agente:
+Los tests son lo que conviene mirar antes de confiar en él. Bouncer corre pytest
+cuando encuentra `tests/` y `pyproject.toml` en la raíz del repo, y ningún otro
+runner de tests. Si tu proyecto se testea con `go test`, `npm test` o
+`cargo test`, agregá ese comando vos: como un hook local en
+`.pre-commit-config.yaml`, que el gate corre y cuya falla lo bloquea, o como una
+etapa en `scripts/verify.sh` si la suite es lenta, porque los hooks de
+pre-commit también corren en cada `git commit`.
+
+Un recorte de lo que le vuelve al agente cuando un check falla. La salida
+completa también lista cada check que pasó o se salteó:
 
 ```text
 === make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
+== units ==
+  tfdocs helpers               ok
 == static (pre-commit) ==
   pre-commit                   FAIL
+      [...]
       yamllint.................................................................Failed
       - hook id: yamllint
       - exit code: 1
 
       config.yaml
-        2:4       error    syntax error: mapping values are not allowed here (syntax)
+        2:5       error    syntax error: mapping values are not allowed here (syntax)
+      [...]
+
+CHECKS FALLIDOS:
+  - pre-commit
 ```
 
 Esa falla no te llega a vos como un prompt nuevo. Le vuelve al agente:
@@ -134,7 +150,7 @@ Bouncer
   │
   │ FAIL
   ▼
-"yamllint falló en config.yaml:2:4"
+"yamllint falló en config.yaml:2:5"
   │
   ▼
 Agente
@@ -305,8 +321,10 @@ git add .claude scripts examples Makefile .pre-commit-config.yaml \
         .yamllint.yml .markdownlint.yaml .gitignore
 ```
 
-**5. Contale las reglas a tu agente.** Agregá esto a tu `CLAUDE.md`, y crealo si
-no tenés:
+**5. Contale las reglas a tu agente.** Si recién creás el `CLAUDE.md`, poné un
+título de primer nivel como `# CLAUDE.md` en la primera línea: el linter de
+Markdown lo exige, y sin eso el gate se pone en rojo el día que commiteás el
+archivo. Después agregá esto:
 
 ```markdown
 ## Definition of Done
@@ -327,7 +345,21 @@ push while it has a critical or high finding open.
 When something fails twice, stop and ask instead of trying a third variation.
 ```
 
-**6. Reiniciá Claude Code y comprobá que el gate está vivo.** Los hooks se leen
+**6. Corré el gate vos una vez, antes que el agente.** `make bootstrap` corre
+los checks en silencio, así que lo que tu repo ya tenía mal sigue ahí, y va a
+rebotar el primer turno del agente.
+
+```bash
+make verify
+```
+
+Arreglá lo que marque. Si alguna regla no encaja con tu proyecto, este es el
+momento de ajustar `.yamllint.yml`, `.markdownlint.yaml` o
+`.pre-commit-config.yaml`. Esa decisión es tuya mientras adoptás Bouncer; una
+vez que los hooks están vivos, `CLAUDE.md` le dice al agente que nunca afloje un
+check para pasar.
+
+**7. Reiniciá Claude Code y comprobá que el gate está vivo.** Los hooks se leen
 al arrancar la sesión, así que hasta que no reinicies no hay nada armado.
 Después rompé algo a propósito y confirmá que te frenan. Un gate que nunca viste
 bloquear nada es un gate que no tenés, y
@@ -346,8 +378,8 @@ No hace más inteligente a tu modelo.
 Hace algo más simple: hace que tu agente pase por el mismo gate de verificación
 que habrías usado vos.
 
-La diferencia es que, cuando algo falla, la falla le llega primero al agente. A
-vos te llega el resultado cuando ya pasó.
+La diferencia es que, cuando algo falla, la falla le llega primero al agente.
+Vos entrás cuando pasa, o cuando te escala el problema.
 
 ## Los comandos
 

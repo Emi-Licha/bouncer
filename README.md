@@ -36,7 +36,7 @@ The repository already knows how to check most of this:
 - Tests know whether the code works.
 - Terraform knows whether its configuration is valid.
 - Helm knows whether a chart renders.
-- Kubernetes schemas say whether a manifest is valid.
+- kubeconform knows whether a manifest matches its Kubernetes schema.
 
 The tools already exist.
 
@@ -96,8 +96,8 @@ Bouncer trusts the repository.
 
 ## What Bouncer checks
 
-Bouncer doesn't invent a new verification language. It uses the tools your
-project already trusts:
+Bouncer doesn't invent a new verification language. It uses standard tools you
+probably already know:
 
 - linters
 - validators
@@ -107,21 +107,36 @@ project already trusts:
 - generated-file checks
 - coverage thresholds
 
-It runs only what applies: no Terraform in your repository means no Terraform
-checks.
+They are a fixed set, chosen for infrastructure work, and Bouncer runs only what
+applies: no Terraform in your repository means no Terraform checks.
 
-When a check fails, this is what the agent gets back:
+Tests are the part to look at before you rely on it. Bouncer runs pytest when it
+finds `tests/` and `pyproject.toml` at the root of the repository, and no other
+test runner. If your project tests with `go test`, `npm test` or `cargo test`,
+add that command yourself: as a local hook in `.pre-commit-config.yaml`, which
+the gate runs and whose failure blocks it, or as a stage in `scripts/verify.sh`
+if the suite is slow, since pre-commit hooks also run on every `git commit`.
+
+An excerpt of what the agent gets back when a check fails. The full output also
+lists every check that passed or was skipped:
 
 ```text
 === make verify FAILED (attempt 1/3): the turn cannot end ===
+== units ==
+  tfdocs helpers               ok
 == static (pre-commit) ==
   pre-commit                   FAIL
+      [...]
       yamllint.................................................................Failed
       - hook id: yamllint
       - exit code: 1
 
       config.yaml
-        2:4       error    syntax error: mapping values are not allowed here (syntax)
+        2:5       error    syntax error: mapping values are not allowed here (syntax)
+      [...]
+
+FAILED CHECKS:
+  - pre-commit
 ```
 
 That failure doesn't reach you as a new prompt. It goes back to the agent:
@@ -134,7 +149,7 @@ Bouncer
   │
   │ FAIL
   ▼
-"yamllint failed at config.yaml:2:4"
+"yamllint failed at config.yaml:2:5"
   │
   ▼
 Agent
@@ -305,8 +320,10 @@ git add .claude scripts examples Makefile .pre-commit-config.yaml \
         .yamllint.yml .markdownlint.yaml .gitignore
 ```
 
-**5. Tell your agent the rules.** Add this to your `CLAUDE.md`, creating it if
-you do not have one:
+**5. Tell your agent the rules.** If you are creating `CLAUDE.md`, put a
+top-level heading such as `# CLAUDE.md` on its first line: the Markdown linter
+requires one, and without it the gate turns red the day you commit the file.
+Then add this:
 
 ```markdown
 ## Definition of Done
@@ -327,7 +344,20 @@ push while it has a critical or high finding open.
 When something fails twice, stop and ask instead of trying a third variation.
 ```
 
-**6. Restart Claude Code, then prove the gate is live.** Hooks are read when a
+**6. Run the gate yourself once, before the agent does.** `make bootstrap` runs
+the checks silently, so anything your repository already had wrong is still
+there, and it would bounce the agent's very first turn.
+
+```bash
+make verify
+```
+
+Fix what it reports. If a rule does not fit your project, this is the moment to
+adjust `.yamllint.yml`, `.markdownlint.yaml` or `.pre-commit-config.yaml`. That
+is your decision while adopting Bouncer; once the hooks are live, `CLAUDE.md`
+tells the agent never to relax a check to get past it.
+
+**7. Restart Claude Code, then prove the gate is live.** Hooks are read when a
 session starts, so nothing is armed until you restart. Then break something on
 purpose and confirm you get stopped. A gate you have never seen block anything
 is a gate you do not have, and [how it works](docs/how-it-works.md#the-trap)
@@ -347,7 +377,7 @@ It does something simpler: it makes your agent pass through the same
 verification gate you would have used yourself.
 
 The difference is that when something fails, the agent gets the failure first.
-You get the result after it passes.
+You come in when it passes, or when it escalates the problem to you.
 
 ## The commands
 

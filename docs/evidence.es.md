@@ -7,6 +7,10 @@ que le crean. Todo esto se corrió en macOS.
 
 ## Contra una sesión real de Claude Code
 
+Esto se corrió antes de que el tercer veredicto pasara de release a escalate. El
+renombre cambió nombres y mensajes, no la lógica, y las corridas de la línea de
+comandos de abajo incluyen la versión renombrada.
+
 - Los dos hooks registrados, y de qué archivo de settings salieron.
 - `PostToolUse` devolviendo un error de lint al contexto del agente.
 - `Stop` bloqueando un turno, la escalada al tercer intento, y el contador
@@ -38,10 +42,14 @@ que le crean. Todo esto se corrió en macOS.
   el resumen reformateado, que anotan que no se pudo leer el check en vez de un
   `?` pelado.
 - Instalarlo en un proyecto vacío siguiendo al pie de la letra los pasos de
-  instalación: `make verify` en verde con contenido limpio y en rojo con un
-  script roto, los dos hooks saliendo con 2 al recibir la misma entrada que les
-  manda Claude Code, y `make demo` y `make selftest` negándose a correr hasta
-  que se copiaron los fixtures.
+  instalación actuales, repetido después del renombre: `make verify` en verde
+  con contenido limpio y en rojo con un script roto; el hook de Stop rebotando
+  dos veces y escalando a la tercera falla con los mensajes nuevos;
+  `.skip-verify` anotado; `export BOUNCER_LANG=es` llegando a los hooks; y
+  `make demo` y `make selftest` negándose a correr sin los fixtures. La misma
+  corrida encontró que un `CLAUDE.md` con solo el bloque de Definition of Done
+  falla en markdownlint una vez commiteado, y por eso el paso 5 pide un título
+  de primer nivel.
 
 Los chequeos sobre contenido real se pueden reproducir con `make demo` y
 `make selftest`, salvo el piso de cobertura: la etapa de Python busca `src/`,

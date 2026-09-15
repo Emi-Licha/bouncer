@@ -7,6 +7,10 @@ believed. All of this was run on macOS.
 
 ## Against a live Claude Code session
 
+These were run before the third verdict was renamed from release to escalate.
+The rename changed names and messages, not the logic, and the command-line runs
+below include the renamed version.
+
 - Both hooks registered, and which settings file they came from.
 - `PostToolUse` returning a lint error into the agent's context.
 - `Stop` blocking a turn, the three-strike escalation, and the counter resetting.
@@ -33,10 +37,14 @@ believed. All of this was run on macOS.
   Stop hook the input Claude Code sends it, in a scratch copy of the repository.
   Including the two ways it degrades: no catalogue, and a reformatted summary,
   which log that the failing check could not be read rather than a bare `?`.
-- Installing into an empty project by following the install steps to the letter:
-  `make verify` green on clean content and red on a broken script, both hooks
-  exiting 2 when fed the same input Claude Code sends them, and `make demo` and
-  `make selftest` refusing to run until the fixtures were copied.
+- Installing into an empty project by following the current install steps to
+  the letter, repeated after the rename: `make verify` green on clean content
+  and red on a broken script; the Stop hook bouncing twice and escalating on the
+  third failure with the renamed messages; `.skip-verify` logged;
+  `export BOUNCER_LANG=es` reaching the hooks; and `make demo` and
+  `make selftest` refusing to run without the fixtures. The same run found that
+  a `CLAUDE.md` holding only the Definition of Done block fails markdownlint
+  once it is committed, which is why step 5 asks for a top-level heading.
 
 The checks against real content can be reproduced with `make demo` and
 `make selftest`, except the coverage floor: the Python stage looks for `src/`,
