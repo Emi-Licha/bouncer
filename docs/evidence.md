@@ -43,8 +43,9 @@ below include the renamed version.
   third failure with the renamed messages; `.skip-verify` logged;
   `export BOUNCER_LANG=es` reaching the hooks; and `make demo` and
   `make selftest` refusing to run without the fixtures. The same run found that
-  a `CLAUDE.md` holding only the Definition of Done block fails markdownlint
-  once it is committed, which is why step 5 asks for a top-level heading.
+  a `CLAUDE.md` holding only the Definition of Done block fails markdownlint as
+  soon as it is staged, and git refuses the commit, which is why step 5 asks for
+  a top-level heading.
 
 The checks against real content can be reproduced with `make demo` and
 `make selftest`, except the coverage floor: the Python stage looks for `src/`,

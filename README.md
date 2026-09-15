@@ -117,8 +117,23 @@ add that command yourself: as a local hook in `.pre-commit-config.yaml`, which
 the gate runs and whose failure blocks it, or as a stage in `scripts/verify.sh`
 if the suite is slow, since pre-commit hooks also run on every `git commit`.
 
-An excerpt of what the agent gets back when a check fails. The full output also
-lists every check that passed or was skipped:
+A local hook that runs a whole-project command needs two settings:
+`pass_filenames: false`, or pre-commit appends every matching file name to the
+command, and `always_run: true`, so it runs even when a commit touches no file
+it matches. Under the `repo: local` hooks:
+
+```yaml
+      - id: project-tests
+        name: project tests
+        entry: go test ./...
+        language: system
+        pass_filenames: false
+        always_run: true
+```
+
+An excerpt of what the agent gets back when a check fails. The hook hands it the
+last sixty lines of the output, which also list the checks that passed or were
+skipped:
 
 ```text
 === make verify FAILED (attempt 1/3): the turn cannot end ===
@@ -322,8 +337,8 @@ git add .claude scripts examples Makefile .pre-commit-config.yaml \
 
 **5. Tell your agent the rules.** If you are creating `CLAUDE.md`, put a
 top-level heading such as `# CLAUDE.md` on its first line: the Markdown linter
-requires one, and without it the gate turns red the day you commit the file.
-Then add this:
+requires one, and without it the gate turns red as soon as you stage the file,
+and git refuses the commit. Then add this:
 
 ```markdown
 ## Definition of Done
@@ -345,8 +360,9 @@ When something fails twice, stop and ask instead of trying a third variation.
 ```
 
 **6. Run the gate yourself once, before the agent does.** `make bootstrap` runs
-the checks silently, so anything your repository already had wrong is still
-there, and it would bounce the agent's very first turn.
+only the static checks, silently, and none of the others, so anything your
+repository already had wrong is still there, and it would bounce the agent's
+very first turn.
 
 ```bash
 make verify

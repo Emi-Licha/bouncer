@@ -118,8 +118,24 @@ runner de tests. Si tu proyecto se testea con `go test`, `npm test` o
 etapa en `scripts/verify.sh` si la suite es lenta, porque los hooks de
 pre-commit también corren en cada `git commit`.
 
-Un recorte de lo que le vuelve al agente cuando un check falla. La salida
-completa también lista cada check que pasó o se salteó:
+Un hook local que corre un comando sobre todo el proyecto necesita dos ajustes:
+`pass_filenames: false`, porque si no pre-commit le agrega al comando el nombre
+de cada archivo que coincide, y `always_run: true`, para que corra aunque un
+commit no toque ningún archivo que coincida. Dentro de los hooks de
+`repo: local`:
+
+```yaml
+      - id: project-tests
+        name: project tests
+        entry: go test ./...
+        language: system
+        pass_filenames: false
+        always_run: true
+```
+
+Un recorte de lo que le vuelve al agente cuando un check falla. El hook le pasa
+las últimas sesenta líneas de la salida, que también listan los checks que
+pasaron o se saltearon:
 
 ```text
 === make verify FALLÓ (intento 1/3): no se puede terminar el turno ===
@@ -323,8 +339,8 @@ git add .claude scripts examples Makefile .pre-commit-config.yaml \
 
 **5. Contale las reglas a tu agente.** Si recién creás el `CLAUDE.md`, poné un
 título de primer nivel como `# CLAUDE.md` en la primera línea: el linter de
-Markdown lo exige, y sin eso el gate se pone en rojo el día que commiteás el
-archivo. Después agregá esto:
+Markdown lo exige, y sin eso el gate se pone en rojo apenas lo agregás a git, y
+git rechaza el commit. Después agregá esto:
 
 ```markdown
 ## Definition of Done
@@ -346,8 +362,8 @@ When something fails twice, stop and ask instead of trying a third variation.
 ```
 
 **6. Corré el gate vos una vez, antes que el agente.** `make bootstrap` corre
-los checks en silencio, así que lo que tu repo ya tenía mal sigue ahí, y va a
-rebotar el primer turno del agente.
+solo los checks estáticos, en silencio, y ninguno de los demás, así que lo que
+tu repo ya tenía mal sigue ahí, y va a rebotar el primer turno del agente.
 
 ```bash
 make verify

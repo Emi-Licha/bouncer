@@ -48,8 +48,8 @@ comandos de abajo incluyen la versión renombrada.
   `.skip-verify` anotado; `export BOUNCER_LANG=es` llegando a los hooks; y
   `make demo` y `make selftest` negándose a correr sin los fixtures. La misma
   corrida encontró que un `CLAUDE.md` con solo el bloque de Definition of Done
-  falla en markdownlint una vez commiteado, y por eso el paso 5 pide un título
-  de primer nivel.
+  falla en markdownlint apenas se agrega a git, y git rechaza el commit, y por
+  eso el paso 5 pide un título de primer nivel.
 
 Los chequeos sobre contenido real se pueden reproducir con `make demo` y
 `make selftest`, salvo el piso de cobertura: la etapa de Python busca `src/`,
