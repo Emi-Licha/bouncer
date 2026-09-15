@@ -1,5 +1,7 @@
 # Bouncer
 
+![A pixel-art bouncer with his arms crossed, standing behind three panels: PASS, BOUNCE and ESCALATE](docs/assets/bouncer.jpg)
+
 **A verification harness for agentic coding.**
 
 [Léelo en castellano](README.es.md)

@@ -1,5 +1,7 @@
 # Bouncer
 
+![Un patovica en pixel art, de brazos cruzados, detrás de tres paneles: PASS, BOUNCE y ESCALATE](docs/assets/bouncer.jpg)
+
 **Un harness de verificación para trabajo agéntico.**
 
 [Read it in English](README.md)
